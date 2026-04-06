@@ -3,7 +3,7 @@ VERSION     := $(shell git describe --tags --always --dirty 2>/dev/null || echo 
 LDFLAGS     := -X main.version=$(VERSION)
 GOFILES     := $(shell find . -name '*.go' -not -path './vendor/*')
 
-.PHONY: lint test clean fmt vet check
+.PHONY: lint test clean fmt vet check install-deps
 
 # Build the binary for the current platform.
 $(BINARY_NAME): $(GOFILES)
@@ -36,3 +36,7 @@ vet:
 
 # Run all checks before committing: fmt, vet, lint, test.
 check: fmt vet lint test
+
+# Install runtime dependencies (Node.js, npm, Playwright Chromium).
+install-deps:
+	sudo ./scripts/install-deps.sh

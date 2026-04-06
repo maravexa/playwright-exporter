@@ -21,13 +21,11 @@ if [ "${NODE_VERSION}" -lt 18 ] 2>/dev/null; then
     echo "WARNING: On some systems you may need to add the NodeSource repository." >&2
 fi
 
-export PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
-export npm_config_cache=/tmp/playwright-exporter/npm-cache
-
 # Install OS-level Chromium dependencies (requires root)
 DEBIAN_FRONTEND=noninteractive npx --yes playwright install-deps chromium
 
 # Install Chromium browser binary as service user (avoids root-owned files)
+cd /tmp
 runuser -s /bin/bash -c 'PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers npm_config_cache=/tmp/playwright-exporter/npm-cache npx --yes playwright install chromium' playwright-exporter
 
 # Step 4: Initialize test directories with @playwright/test

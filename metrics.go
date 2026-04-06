@@ -111,7 +111,7 @@ func NewMetricsCache(reg prometheus.Registerer, cfg *Config) (*MetricsCache, err
 	// Pre-initialise schedule-level metrics so they exist from startup.
 	for _, s := range cfg.Schedules {
 		mc.scheduleInterval.WithLabelValues(s.Name).Set(s.Interval.Seconds())
-		mc.up.WithLabelValues(s.Name) // initialise to 0
+		mc.up.WithLabelValues(s.Name)           // initialise to 0
 		mc.runSkipTotal.WithLabelValues(s.Name) // initialise counter to 0
 	}
 

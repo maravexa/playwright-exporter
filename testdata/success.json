@@ -1,0 +1,73 @@
+{
+  "suites": [
+    {
+      "title": "Login",
+      "specs": [
+        {
+          "title": "enters credentials successfully",
+          "tests": [
+            {
+              "results": [
+                {
+                  "status": "passed",
+                  "duration": 3420
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "redirects to dashboard after login",
+          "tests": [
+            {
+              "results": [
+                {
+                  "status": "passed",
+                  "duration": 1850
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Search",
+      "specs": [
+        {
+          "title": "returns results for valid query",
+          "tests": [
+            {
+              "results": [
+                {
+                  "status": "passed",
+                  "duration": 2100
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "shows empty state for no results",
+          "tests": [
+            {
+              "results": [
+                {
+                  "status": "passed",
+                  "duration": 980
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "stats": {
+    "expected": 4,
+    "unexpected": 0,
+    "flaky": 0,
+    "skipped": 0,
+    "duration": 8350
+  }
+}

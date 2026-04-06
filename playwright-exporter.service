@@ -1,0 +1,24 @@
+[Unit]
+Description=Playwright Prometheus Exporter
+Documentation=https://github.com/maravexa/playwright-exporter
+After=network.target
+
+[Service]
+Type=simple
+User=playwright-exporter
+Group=playwright-exporter
+ExecStart=/usr/local/bin/playwright-exporter -config /etc/playwright-exporter/config.yaml
+Restart=on-failure
+RestartSec=5s
+MemoryMax=2G
+TimeoutStopSec=10
+
+# Security hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/tmp/playwright-exporter
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

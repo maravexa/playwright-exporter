@@ -86,6 +86,11 @@ nfpms:
           owner: playwright-exporter
           group: playwright-exporter
 
+      - src: scripts/playwright-exporter-setup.sh
+        dst: /usr/local/bin/playwright-exporter-setup
+        file_info:
+          mode: 0755
+
     scripts:
       postinstall: scripts/postinstall.sh
       preremove: scripts/preremove.sh

@@ -17,6 +17,8 @@ archives:
       - playwright-exporter
     formats:
       - tar.gz
+    files:
+      - none*
     name_template: "playwright-exporter_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
   - id: archlinux
@@ -24,6 +26,8 @@ archives:
       - playwright-exporter
     formats:
       - tar.zst
+    files:
+      - none*
     name_template: "playwright-exporter_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
 nfpms:
@@ -43,7 +47,6 @@ nfpms:
       - src: config.example.yaml
         dst: /etc/playwright-exporter/config.yaml
         type: config
-          mode: 0644
 
       - src: playwright-exporter.service
         dst: /usr/lib/systemd/system/playwright-exporter.service

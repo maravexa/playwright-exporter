@@ -21,10 +21,40 @@ graph TD
     K -->|scrape| L[Prometheus]
 ```
 
+## Installation
+
+### Debian/Ubuntu
+
+```bash
+wget https://github.com/maravexa/playwright-exporter/releases/latest/download/playwright-exporter_X.Y.Z_amd64.deb
+sudo dpkg -i playwright-exporter_X.Y.Z_amd64.deb
+sudo apt-get install -f  # resolve any missing dependencies
+```
+
+The package installs the binary, systemd unit, and example config, then runs `scripts/postinstall.sh` automatically. This creates the `playwright-exporter` system user, installs Playwright Chromium to `/opt/playwright-browsers`, and reloads systemd.
+
+### RHEL/Fedora/Rocky
+
+```bash
+sudo rpm -i https://github.com/maravexa/playwright-exporter/releases/latest/download/playwright-exporter_X.Y.Z_amd64.rpm
+```
+
+### Arch Linux
+
+The `.tar.zst` archive contains the raw binary only. Install Node.js and npm separately, then extract and run the postinstall script manually:
+
+```bash
+wget https://github.com/maravexa/playwright-exporter/releases/latest/download/playwright-exporter_X.Y.Z_linux_amd64.tar.zst
+sudo tar --zstd -xf playwright-exporter_X.Y.Z_linux_amd64.tar.zst -C /usr/local/bin/
+# Install Node.js and npm via pacman if not already installed:
+# sudo pacman -S nodejs npm
+# Then run postinstall manually:
+sudo ./scripts/postinstall.sh
+```
+
 ## Prerequisites
 
-The exporter requires Node.js (v18+) and Playwright with Chromium. An install script handles
-all dependencies across Ubuntu, RHEL-family, and Arch Linux:
+The exporter requires Node.js (v18+) and Playwright with Chromium. Package installs handle this automatically. For manual or Arch Linux installs, an install script handles dependencies across Ubuntu, RHEL-family, and Arch Linux:
 
     sudo ./scripts/install-deps.sh
 
@@ -34,7 +64,7 @@ See the script output for post-install steps.
 
 ### 1. Install
 
-Download a binary from the [releases page](https://github.com/maravexa/playwright-exporter/releases) or build from source:
+Install via a package (see [Installation](#installation) above) or build from source:
 
 ```sh
 go install github.com/maravexa/playwright-exporter@latest

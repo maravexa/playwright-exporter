@@ -1,0 +1,29 @@
+listen_address: ":9115"
+
+schedules:
+  - name: ai_chat
+    interval: 10m
+    timeout: 8m
+    playwright_dir: /opt/playwright-tests/ai-chat
+    command: "npx playwright test --reporter=json"
+    labels:
+      site: ai_chat
+      tier: production
+
+  - name: search
+    interval: 5m
+    timeout: 4m
+    playwright_dir: /opt/playwright-tests/search
+    command: "npx playwright test --reporter=json"
+    labels:
+      site: search
+      tier: production
+
+  - name: internal_tools
+    interval: 12h
+    timeout: 10m
+    playwright_dir: /opt/playwright-tests/internal
+    command: "npx playwright test --reporter=json"
+    labels:
+      category: internal
+      tier: infrastructure

@@ -14,7 +14,7 @@ import (
 
 // newTestScheduler builds a Scheduler backed by a fake Executor that returns
 // the provided Playwright JSON output.
-func newTestScheduler(t *testing.T, jsonOutput []byte) (*Scheduler, *MetricsCache) {
+func newTestScheduler(t *testing.T, jsonOutput []byte) *Scheduler {
 	t.Helper()
 	dir := t.TempDir()
 	cfg := &Config{
@@ -35,7 +35,7 @@ func newTestScheduler(t *testing.T, jsonOutput []byte) (*Scheduler, *MetricsCach
 		t.Fatal(err)
 	}
 
-	exec := &Executor{
+	ex := &Executor{
 		buildCmd: func(ctx context.Context, name string, args ...string) *exec.Cmd {
 			// Return a command that writes the fake JSON to stdout and exits 0.
 			cmd := exec.CommandContext(ctx, "cat")
@@ -44,13 +44,12 @@ func newTestScheduler(t *testing.T, jsonOutput []byte) (*Scheduler, *MetricsCach
 		},
 	}
 
-	s := NewScheduler(&cfg.Schedules[0], mc, exec)
-	return s, mc
+	return NewScheduler(&cfg.Schedules[0], mc, ex)
 }
 
 func TestScheduler_RunOnceSuccess(t *testing.T) {
 	data := []byte(`{"suites":[{"title":"S","specs":[{"title":"T","tests":[{"results":[{"status":"passed","duration":100}]}]}]}],"stats":{}}`)
-	s, _ := newTestScheduler(t, data)
+	s := newTestScheduler(t, data)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -64,11 +63,10 @@ func TestScheduler_RunOnceSuccess(t *testing.T) {
 
 func TestScheduler_SkipWhenRunning(t *testing.T) {
 	data := []byte(`{"suites":[],"stats":{}}`)
-	s, mc := newTestScheduler(t, data)
+	s := newTestScheduler(t, data)
 
 	// Simulate a run already in progress.
 	s.running.Store(true)
-	_ = mc
 
 	ctx := context.Background()
 	s.runOnce(ctx)
@@ -84,7 +82,7 @@ func TestScheduler_SkipWhenRunning(t *testing.T) {
 
 func TestScheduler_SkipCounterIncrements(t *testing.T) {
 	data := []byte(`{"suites":[],"stats":{}}`)
-	s, mc := newTestScheduler(t, data)
+	s := newTestScheduler(t, data)
 
 	s.running.Store(true)
 
@@ -92,14 +90,12 @@ func TestScheduler_SkipCounterIncrements(t *testing.T) {
 	s.runOnce(ctx)
 	s.runOnce(ctx)
 
-	// Check skip counter was incremented twice (via mc, not re-registering).
-	_ = mc
 	s.running.Store(false)
 }
 
 func TestScheduler_ContextCancellation(t *testing.T) {
 	data := []byte(`{"suites":[],"stats":{}}`)
-	s, _ := newTestScheduler(t, data)
+	s := newTestScheduler(t, data)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -123,7 +119,7 @@ func TestScheduler_ContextCancellation(t *testing.T) {
 
 func TestScheduler_ConcurrentRunPrevention(t *testing.T) {
 	data := []byte(`{"suites":[{"title":"S","specs":[{"title":"T","tests":[{"results":[{"status":"passed","duration":10}]}]}]}],"stats":{}}`)
-	s, _ := newTestScheduler(t, data)
+	s := newTestScheduler(t, data)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

@@ -28,12 +28,12 @@ type Config struct {
 
 // ScheduleConfig defines one scheduled Playwright test run.
 type ScheduleConfig struct {
+	Labels        map[string]string `yaml:"labels"`
 	Name          string            `yaml:"name"`
-	Interval      Duration          `yaml:"interval"`
-	Timeout       Duration          `yaml:"timeout"`
 	PlaywrightDir string            `yaml:"playwright_dir"`
 	Command       string            `yaml:"command"`
-	Labels        map[string]string `yaml:"labels"`
+	Interval      Duration          `yaml:"interval"`
+	Timeout       Duration          `yaml:"timeout"`
 }
 
 // Duration wraps time.Duration to support YAML unmarshalling of Go duration strings.

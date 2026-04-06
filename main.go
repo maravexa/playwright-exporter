@@ -97,8 +97,9 @@ func main() {
 	})
 
 	srv := &http.Server{
-		Addr:    cfg.ListenAddress,
-		Handler: mux,
+		Addr:              cfg.ListenAddress,
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	// Start HTTP server in a goroutine.

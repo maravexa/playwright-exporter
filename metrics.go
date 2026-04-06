@@ -10,19 +10,17 @@ import (
 
 // MetricsCache holds Prometheus metrics and provides synchronized access.
 type MetricsCache struct {
-	mu sync.RWMutex
-
-	up                  *prometheus.GaugeVec
-	lastRunTimestamp    *prometheus.GaugeVec
-	runDuration         *prometheus.GaugeVec
-	scheduleInterval    *prometheus.GaugeVec
-	runSkipTotal        *prometheus.CounterVec
-	testSuccess         *prometheus.GaugeVec
-	testDuration        *prometheus.GaugeVec
-	buildInfo           *prometheus.GaugeVec
-
-	// customLabelKeys maps schedule name → sorted label key list
+	up               *prometheus.GaugeVec
+	lastRunTimestamp *prometheus.GaugeVec
+	runDuration      *prometheus.GaugeVec
+	scheduleInterval *prometheus.GaugeVec
+	runSkipTotal     *prometheus.CounterVec
+	testSuccess      *prometheus.GaugeVec
+	testDuration     *prometheus.GaugeVec
+	buildInfo        *prometheus.GaugeVec
+	// customLabelKeys maps schedule name → label key list
 	customLabelKeys map[string][]string
+	mu              sync.RWMutex
 }
 
 // NewMetricsCache creates and registers all Prometheus metrics.

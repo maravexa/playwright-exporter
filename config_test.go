@@ -26,7 +26,7 @@ schedules:
       site: example
 `
 	path := filepath.Join(dir, "config.yaml")
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -62,7 +62,7 @@ schedules:
     playwright_dir: ` + dir + `
 `
 	path := filepath.Join(dir, "config.yaml")
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -86,7 +86,7 @@ schedules:
     playwright_dir: ` + dir + `
 `
 	path := filepath.Join(dir, "config.yaml")
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 		t.Fatal(err)
 	}
 

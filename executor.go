@@ -58,9 +58,9 @@ type FlatTest struct {
 
 // RunResult is the outcome of executing one schedule's Playwright suite.
 type RunResult struct {
+	FinishedAt time.Time
 	Tests      []FlatTest
 	Duration   time.Duration
-	FinishedAt time.Time
 }
 
 // Executor runs a Playwright command and parses its JSON output.

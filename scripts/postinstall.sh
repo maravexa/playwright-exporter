@@ -1,5 +1,6 @@
 #!/bin/bash
 set -euo pipefail
+export DEBIAN_FRONTEND=noninteractive
 
 # Step 1: Create system user
 if ! id -u playwright-exporter &>/dev/null; then
@@ -23,12 +24,11 @@ fi
 export PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
 export npm_config_cache=/tmp/playwright-exporter/npm-cache
 
-# Install Playwright and Chromium browser with OS-level deps
-# Run as playwright-exporter user to avoid root-owned cache files
-sudo -u playwright-exporter \
-    PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers \
-    npm_config_cache=/tmp/playwright-exporter/npm-cache \
-    npx playwright install --with-deps chromium
+# Install OS-level Chromium dependencies (requires root)
+DEBIAN_FRONTEND=noninteractive npx --yes playwright install-deps chromium
+
+# Install Chromium browser binary as service user (avoids root-owned files)
+su -s /bin/bash -c 'PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers npm_config_cache=/tmp/playwright-exporter/npm-cache npx --yes playwright install chromium' playwright-exporter
 
 # Step 4: Initialize test directories with @playwright/test
 for dir in /opt/playwright-tests/*/; do
@@ -37,8 +37,8 @@ for dir in /opt/playwright-tests/*/; do
         echo "Initializing Playwright in ${dir}..."
         cd "$dir"
         # Only run npm init if no package.json exists
-        [ -f "package.json" ] || sudo -u playwright-exporter npm_config_cache=/tmp/playwright-exporter/npm-cache npm init -y
-        sudo -u playwright-exporter npm_config_cache=/tmp/playwright-exporter/npm-cache npm install @playwright/test
+        [ -f "package.json" ] || su -s /bin/bash -c 'npm_config_cache=/tmp/playwright-exporter/npm-cache npm init -y' playwright-exporter
+        su -s /bin/bash -c 'npm_config_cache=/tmp/playwright-exporter/npm-cache npm install @playwright/test' playwright-exporter
         chown -R playwright-exporter:playwright-exporter "$dir"
     fi
 done

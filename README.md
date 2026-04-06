@@ -8,8 +8,8 @@ A Prometheus exporter that runs Playwright test suites on independent schedules 
 graph TD
     A[systemd / CLI] -->|starts| B[playwright-exporter binary]
     B -->|parses| C[config.yaml]
-    B -->|spawns| D[Schedule goroutine: ai-chat 10m]
-    B -->|spawns| E[Schedule goroutine: search 5m]
+    B -->|spawns| D[Schedule goroutine: site1 10m]
+    B -->|spawns| E[Schedule goroutine: site2 5m]
     B -->|spawns| F[Schedule goroutine: internal-tools 12h]
     D -->|exec npx playwright test| G[Playwright process]
     E -->|exec npx playwright test| H[Playwright process]

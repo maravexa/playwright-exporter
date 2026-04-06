@@ -26,30 +26,23 @@ graph TD
 ### Debian/Ubuntu
 
 ```bash
-wget https://github.com/maravexa/playwright-exporter/releases/latest/download/playwright-exporter_X.Y.Z_amd64.deb
-sudo dpkg -i playwright-exporter_X.Y.Z_amd64.deb
-sudo apt-get install -f  # resolve any missing dependencies
+sudo apt install ./playwright-exporter_X.Y.Z_linux_amd64.deb
+sudo playwright-exporter-setup
 ```
-
-The package installs the binary, systemd unit, and example config, then runs `scripts/postinstall.sh` automatically. This creates the `playwright-exporter` system user, installs Playwright Chromium to `/opt/playwright-browsers`, and reloads systemd.
 
 ### RHEL/Fedora/Rocky
 
 ```bash
-sudo rpm -i https://github.com/maravexa/playwright-exporter/releases/latest/download/playwright-exporter_X.Y.Z_amd64.rpm
+sudo rpm -i playwright-exporter_X.Y.Z_linux_amd64.rpm
+sudo playwright-exporter-setup
 ```
 
 ### Arch Linux
 
-The `.tar.zst` archive contains the raw binary only. Install Node.js and npm separately, then extract and run the postinstall script manually:
-
 ```bash
-wget https://github.com/maravexa/playwright-exporter/releases/latest/download/playwright-exporter_X.Y.Z_linux_amd64.tar.zst
+# Install nodejs and npm from official repos first
 sudo tar --zstd -xf playwright-exporter_X.Y.Z_linux_amd64.tar.zst -C /usr/local/bin/
-# Install Node.js and npm via pacman if not already installed:
-# sudo pacman -S nodejs npm
-# Then run postinstall manually:
-sudo ./scripts/postinstall.sh
+sudo playwright-exporter-setup
 ```
 
 ## Prerequisites

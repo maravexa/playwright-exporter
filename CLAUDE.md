@@ -33,6 +33,7 @@ Run a single test file: `go test -race -run TestConfigValidation ./...`
 - **Self-describing staleness.** The exporter exposes `playwright_schedule_interval_seconds` so Prometheus alert rules can compute staleness thresholds dynamically without hardcoded values.
 - **Gauges, not histograms.** Tests run once per interval, not sampled from a distribution.
 - **Timeout < interval enforced at startup.** If omitted, timeout defaults to 80% of interval.
+- **Two-step install.** The deb/rpm package handles binary, config, systemd unit, user creation, and directories. `playwright-exporter-setup` is a separate manual step that installs Chromium and initializes test directories. This split exists because dpkg holds a lock during postinstall, preventing nested package manager calls.
 
 ## Code Layout
 

@@ -3,7 +3,7 @@ VERSION     := $(shell git describe --tags --always --dirty 2>/dev/null || echo 
 LDFLAGS     := -X main.version=$(VERSION)
 GOFILES     := $(shell find . -name '*.go' -not -path './vendor/*')
 
-.PHONY: lint test clean fmt vet check install-deps
+.PHONY: lint test clean fmt vet check install-deps snapshot package
 
 # Build the binary for the current platform.
 $(BINARY_NAME): $(GOFILES)
@@ -40,3 +40,11 @@ check: fmt vet lint test
 # Install runtime dependencies (Node.js, npm, Playwright Chromium).
 install-deps:
 	sudo ./scripts/install-deps.sh
+
+# Build a snapshot release locally (no publish).
+snapshot:
+	goreleaser release --snapshot --clean
+
+# Build only the packages without publishing.
+package:
+	goreleaser build --snapshot --clean

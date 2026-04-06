@@ -1,0 +1,101 @@
+version: 2
+
+builds:
+  - id: playwright-exporter
+    binary: playwright-exporter
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -X main.version={{ .Version }}
+
+archives:
+  - id: default
+    ids:
+      - playwright-exporter
+    formats:
+      - tar.gz
+    name_template: "playwright-exporter_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+  - id: archlinux
+    ids:
+      - playwright-exporter
+    formats:
+      - tar.zst
+    name_template: "playwright-exporter_{{ .Version }}_{{ .Os }}_{{ .Arch }}.tar.zst"
+
+nfpms:
+  - id: packages
+    ids:
+      - playwright-exporter
+    package_name: playwright-exporter
+    homepage: https://github.com/maravexa/playwright-exporter
+    maintainer: "maravexa <me@maravexa.com>"
+    description: "Prometheus exporter that runs Playwright test suites on independent schedules for synthetic monitoring"
+    license: MIT
+    formats:
+      - deb
+      - rpm
+
+    contents:
+      - src: config.example.yaml
+        dst: /etc/playwright-exporter/config.yaml
+        type: config|noreplace
+
+      - src: playwright-exporter.service
+        dst: /usr/lib/systemd/system/playwright-exporter.service
+
+      - dst: /etc/playwright-exporter
+        type: dir
+        file_info:
+          mode: 0755
+          owner: root
+          group: root
+
+      - dst: /opt/playwright-tests
+        type: dir
+        file_info:
+          mode: 0755
+          owner: playwright-exporter
+          group: playwright-exporter
+
+      - dst: /opt/playwright-browsers
+        type: dir
+        file_info:
+          mode: 0755
+          owner: playwright-exporter
+          group: playwright-exporter
+
+      - dst: /tmp/playwright-exporter
+        type: dir
+        file_info:
+          mode: 0755
+          owner: playwright-exporter
+          group: playwright-exporter
+
+      - dst: /tmp/playwright-exporter/npm-cache
+        type: dir
+        file_info:
+          mode: 0755
+          owner: playwright-exporter
+          group: playwright-exporter
+
+    scripts:
+      postinstall: scripts/postinstall.sh
+      preremove: scripts/preremove.sh
+
+    overrides:
+      deb:
+        dependencies:
+          - nodejs (>= 18.0.0)
+          - npm
+        recommends:
+          - chromium
+      rpm:
+        dependencies:
+          - nodejs >= 18.0.0
+          - npm
+        recommends:
+          - chromium

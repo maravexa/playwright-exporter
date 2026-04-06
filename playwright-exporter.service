@@ -8,6 +8,7 @@ Type=simple
 User=playwright-exporter
 Group=playwright-exporter
 ExecStart=/usr/local/bin/playwright-exporter -config /etc/playwright-exporter/config.yaml
+Environment=PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
 Restart=on-failure
 RestartSec=5s
 MemoryMax=2G
@@ -17,7 +18,7 @@ TimeoutStopSec=10
 NoNewPrivileges=yes
 ProtectSystem=strict
 ProtectHome=yes
-ReadWritePaths=/tmp/playwright-exporter
+ReadWritePaths=/tmp/playwright-exporter /opt/playwright-browsers /opt/playwright-tests
 PrivateTmp=yes
 
 [Install]

@@ -21,6 +21,15 @@ graph TD
     K -->|scrape| L[Prometheus]
 ```
 
+## Prerequisites
+
+The exporter requires Node.js (v18+) and Playwright with Chromium. An install script handles
+all dependencies across Ubuntu, RHEL-family, and Arch Linux:
+
+    sudo ./scripts/install-deps.sh
+
+See the script output for post-install steps.
+
 ## Quick Start
 
 ### 1. Install

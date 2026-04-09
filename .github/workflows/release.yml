@@ -111,7 +111,7 @@ jobs:
       - name: Download release artifacts
         run: |
           mkdir -p dist
-          gh release download ${GITHUB_REF#refs/tags/} --dir dist
+          gh release download "${GITHUB_REF#refs/tags/}" --dir dist
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Sign artifacts
@@ -124,7 +124,7 @@ jobs:
           done
       - name: Upload signatures to release
         run: |
-          gh release upload ${GITHUB_REF#refs/tags/} dist/*.sig dist/*.pem --clobber
+          gh release upload "${GITHUB_REF#refs/tags/}" dist/*.sig dist/*.pem --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

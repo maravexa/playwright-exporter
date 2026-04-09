@@ -72,7 +72,7 @@ jobs:
       - name: Generate checksums
         run: |
           cd dist
-          sha256sum * > checksums.txt
+          sha256sum ./* > checksums.txt
           cat checksums.txt
       - name: Upload checksums to release
         run: gh release upload "${GITHUB_REF#refs/tags/}" dist/checksums.txt --clobber

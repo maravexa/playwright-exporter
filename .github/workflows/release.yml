@@ -57,6 +57,26 @@ jobs:
         with:
           sarif_file: trivy-release-results.sarif
 
+  sbom:
+    needs: [release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          format: spdx-json
+          output-file: playwright-exporter.sbom.spdx.json
+      - name: Upload SBOM to release
+        run: gh release upload "${GITHUB_REF#refs/tags/}" playwright-exporter.sbom.spdx.json --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   checksum:
     needs: [release]
     runs-on: ubuntu-latest

@@ -20,9 +20,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run gosec
         # -exclude=G204: subprocess execution is core functionality (see CLAUDE.md)
+        # -exclude=G304: config file path comes from operator-controlled CLI flag
         uses: securego/gosec@master
         with:
-          args: '-no-fail -fmt sarif -out gosec-results.sarif -exclude=G204 ./...'
+          args: '-no-fail -fmt sarif -out gosec-results.sarif -exclude=G204,G304 ./...'
       - name: Upload SARIF
         # Requires GitHub Advanced Security for private repos
         uses: github/codeql-action/upload-sarif@v3

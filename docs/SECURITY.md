@@ -11,7 +11,7 @@
 If you discover a security vulnerability, please report it responsibly:
 
 1. Do NOT open a public GitHub issue.
-2. Email security concerns to [maintainer email].
+2. Email security concerns to [me@maravexa.com].
 3. Include steps to reproduce and impact assessment.
 4. Allow 90 days for a fix before public disclosure.
 

@@ -3,6 +3,7 @@
 [![CI](https://github.com/maravexa/playwright-exporter/actions/workflows/ci.yml/badge.svg)](https://github.com/maravexa/playwright-exporter/actions/workflows/ci.yml)
 [![Security](https://github.com/maravexa/playwright-exporter/actions/workflows/security.yml/badge.svg)](https://github.com/maravexa/playwright-exporter/actions/workflows/security.yml)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/maravexa/playwright-exporter/badge)](https://scorecard.dev/viewer/?uri=github.com/maravexa/playwright-exporter)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12434/badge)](https://www.bestpractices.dev/projects/12434)
 
 A Prometheus exporter that runs Playwright test suites on independent schedules and exposes results as metrics for synthetic monitoring.
 
@@ -47,6 +48,16 @@ sudo playwright-exporter-setup
 # Install nodejs and npm from official repos first
 sudo tar --zstd -xf playwright-exporter_X.Y.Z_linux_amd64.tar.zst -C /usr/local/bin/
 sudo playwright-exporter-setup
+```
+
+### Docker
+
+```bash
+docker run -d \
+  -p 9115:9115 \
+  -v /path/to/config.yaml:/etc/playwright-exporter/config.yaml \
+  -v /path/to/tests:/opt/playwright-tests \
+  ghcr.io/maravexa/playwright-exporter:latest
 ```
 
 ## Prerequisites

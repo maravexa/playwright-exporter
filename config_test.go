@@ -245,3 +245,31 @@ func TestLoadConfig_FileNotFound(t *testing.T) {
 		t.Error("expected error for missing config file")
 	}
 }
+
+func FuzzConfigParse(f *testing.F) {
+	// Seed with valid config
+	f.Add([]byte(`listen_address: ":9115"
+schedules:
+  - name: test
+    interval: 5m
+    timeout: 4m
+    playwright_dir: /tmp
+    command: "npx playwright test --reporter=json"
+`))
+	// Seed with minimal config
+	f.Add([]byte(`listen_address: ":9115"
+schedules:
+  - name: a
+    interval: 1m
+    playwright_dir: /tmp
+`))
+	// Seed with empty input
+	f.Add([]byte(""))
+	// Seed with garbage
+	f.Add([]byte("{{{invalid yaml###"))
+
+	f.Fuzz(func(t *testing.T, data []byte) {
+		// Must not panic. Errors are expected and fine.
+		_, _ = ParseConfigBytes(data)
+	})
+}

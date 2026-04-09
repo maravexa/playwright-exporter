@@ -120,6 +120,12 @@ func (e *Executor) Run(ctx context.Context, s *ScheduleConfig) (*RunResult, erro
 	}, nil
 }
 
+// ParsePlaywrightReport parses Playwright's JSON reporter output.
+// It is the exported entry point for testing and fuzzing.
+func ParsePlaywrightReport(data []byte) (*PlaywrightReport, error) {
+	return parseReport(data)
+}
+
 // parseReport unmarshals Playwright's JSON reporter output.
 func parseReport(data []byte) (*PlaywrightReport, error) {
 	if len(bytes.TrimSpace(data)) == 0 {

@@ -3,7 +3,7 @@ VERSION     := $(shell git describe --tags --always --dirty 2>/dev/null || echo 
 LDFLAGS     := -X main.version=$(VERSION)
 GOFILES     := $(shell find . -name '*.go' -not -path './vendor/*')
 
-.PHONY: lint test clean fmt vet check install-deps snapshot package
+.PHONY: lint test fuzz clean fmt vet check install-deps snapshot package
 
 # Build the binary for the current platform.
 $(BINARY_NAME): $(GOFILES)
@@ -20,6 +20,11 @@ lint:
 # Run tests with the race detector.
 test:
 	go test -race ./...
+
+# Run fuzz tests for 30 seconds each
+fuzz:
+	go test -fuzz=FuzzConfigParse -fuzztime=30s ./...
+	go test -fuzz=FuzzParsePlaywrightReport -fuzztime=30s ./...
 
 # Remove the compiled binary.
 clean:

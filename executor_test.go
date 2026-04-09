@@ -161,3 +161,27 @@ func TestLastResult_Multiple(t *testing.T) {
 		t.Errorf("expected last result status=passed, got %q", r.Status)
 	}
 }
+
+func FuzzParsePlaywrightReport(f *testing.F) {
+	// Seed with valid report
+	successJSON, err := os.ReadFile("testdata/success.json")
+	if err == nil {
+		f.Add(successJSON)
+	}
+	// Seed with failure report
+	failJSON, err := os.ReadFile("testdata/failure.json")
+	if err == nil {
+		f.Add(failJSON)
+	}
+	// Seed with minimal valid JSON
+	f.Add([]byte(`{"suites":[]}`))
+	// Seed with empty
+	f.Add([]byte(""))
+	// Seed with garbage
+	f.Add([]byte("not json at all"))
+
+	f.Fuzz(func(t *testing.T, data []byte) {
+		// Must not panic. Errors are expected and fine.
+		_, _ = ParsePlaywrightReport(data)
+	})
+}

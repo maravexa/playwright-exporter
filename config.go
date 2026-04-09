@@ -52,23 +52,26 @@ func (d *Duration) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
+// ParseConfigBytes parses and validates config from raw YAML bytes.
+// It is the primary entry point for testing and fuzzing.
+func ParseConfigBytes(data []byte) (*Config, error) {
+	var cfg Config
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return nil, fmt.Errorf("parsing config: %w", err)
+	}
+	if err := validateConfig(&cfg); err != nil {
+		return nil, err
+	}
+	return &cfg, nil
+}
+
 // LoadConfig reads and validates the config file at the given path.
 func LoadConfig(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("reading config file %q: %w", path, err)
 	}
-
-	var cfg Config
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("parsing config file: %w", err)
-	}
-
-	if err := validateConfig(&cfg); err != nil {
-		return nil, err
-	}
-
-	return &cfg, nil
+	return ParseConfigBytes(data)
 }
 
 // validateConfig checks all validation rules and applies defaults.

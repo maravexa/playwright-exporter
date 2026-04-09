@@ -67,3 +67,7 @@ Three workflow files:
 - `release.yml` — GoReleaser builds + packages, post-release Trivy scan, SHA256 checksums. Runs on version tags.
 
 All SARIF results upload to GitHub Security tab. G204 is excluded from gosec (subprocess exec is core functionality).
+- Dependabot monitors Go modules and GitHub Actions weekly.
+- Release artifacts are signed with Sigstore cosign (keyless, via Fulcio CA).
+- Docker images are published to ghcr.io on every release.
+- Fuzz tests exist for config parsing and JSON report parsing. Run `make fuzz` locally.

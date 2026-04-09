@@ -218,3 +218,13 @@ sudo journalctl -u playwright-exporter -f
 - **Adding a new suite**: The exporter only runs schedules defined in the config file. Adding a new test directory requires adding a corresponding `schedules` block to the YAML and restarting the service.
 
 - **Non-zero exit is not a failure**: Playwright exits non-zero when tests fail, but the exporter still parses the JSON output and records per-test results. `playwright_up` is set to 0 only when the exporter itself cannot execute or parse results (e.g. process crash, timeout, malformed output).
+
+## Contributing
+
+1. Fork the repo and create a feature branch from `main`
+2. Run `make check` before committing (runs fmt, vet, lint, and tests)
+3. Ensure test coverage doesn't drop below 60%
+4. Open a PR — one approval required, CI must pass
+5. Security issues: see [SECURITY.md](docs/SECURITY.md) for responsible disclosure
+
+All commits to `main` require a signed commit and a passing review.

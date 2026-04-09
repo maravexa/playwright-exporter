@@ -1,0 +1,80 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+# Minimum permissions at workflow level; jobs declare their own as needed.
+permissions: {}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: latest
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  trivy_packages:
+    needs: [release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download release artifacts
+        run: |
+          mkdir -p dist
+          gh release download "${GITHUB_REF#refs/tags/}" --dir dist --pattern '*.tar.gz'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Scan artifacts
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: 'dist/'
+          format: 'sarif'
+          output: 'trivy-release-results.sarif'
+          severity: 'CRITICAL,HIGH'
+      - name: Upload SARIF
+        # Requires GitHub Advanced Security for private repos
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-release-results.sarif
+
+  checksum:
+    needs: [release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download release artifacts
+        run: |
+          mkdir -p dist
+          gh release download "${GITHUB_REF#refs/tags/}" --dir dist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Generate checksums
+        run: |
+          cd dist
+          sha256sum ./* > checksums.txt
+          cat checksums.txt
+      - name: Upload checksums to release
+        run: gh release upload "${GITHUB_REF#refs/tags/}" dist/checksums.txt --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

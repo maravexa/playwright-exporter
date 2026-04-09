@@ -57,3 +57,13 @@ Run a single test file: `go test -race -run TestConfigValidation ./...`
 ## Metrics Prefix
 
 All metrics use the `playwright_` prefix. Reserved label names that must not appear in user-defined schedule labels: `schedule`, `test`, `step`.
+
+## CI/CD
+
+Three workflow files:
+
+- `ci.yml` — lint, test (60% coverage gate), cross-compile check, govulncheck, shellcheck, actionlint. Runs on every push/PR.
+- `security.yml` — gosec, Trivy, CodeQL, dependency review, OpenSSF Scorecard. Runs on PRs + weekly schedule.
+- `release.yml` — GoReleaser builds + packages, post-release Trivy scan, SHA256 checksums. Runs on version tags.
+
+All SARIF results upload to GitHub Security tab. G204 is excluded from gosec (subprocess exec is core functionality).

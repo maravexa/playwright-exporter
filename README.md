@@ -1,5 +1,9 @@
 # playwright-exporter
 
+[![CI](https://github.com/maravexa/playwright-exporter/actions/workflows/ci.yml/badge.svg)](https://github.com/maravexa/playwright-exporter/actions/workflows/ci.yml)
+[![Security](https://github.com/maravexa/playwright-exporter/actions/workflows/security.yml/badge.svg)](https://github.com/maravexa/playwright-exporter/actions/workflows/security.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/maravexa/playwright-exporter/badge)](https://scorecard.dev/viewer/?uri=github.com/maravexa/playwright-exporter)
+
 A Prometheus exporter that runs Playwright test suites on independent schedules and exposes results as metrics for synthetic monitoring.
 
 ## Architecture

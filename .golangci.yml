@@ -23,4 +23,5 @@ linters-settings:
     enable-all: true
   gosec:
     excludes:
-      - G204  # We intentionally exec subprocesses
+      - G204  # Subprocess exec is core functionality
+      - G304  # Config file path comes from operator-controlled CLI flag

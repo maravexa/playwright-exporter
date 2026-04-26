@@ -5,7 +5,7 @@
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/maravexa/playwright-exporter/badge)](https://scorecard.dev/viewer/?uri=github.com/maravexa/playwright-exporter)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12434/badge)](https://www.bestpractices.dev/projects/12434)
 
-A Prometheus exporter that runs Playwright test suites on independent schedules and exposes results as metrics for synthetic monitoring.
+Playwright can catch broken user flows before real users do, but its results live in HTML reports and CI logs — outside Prometheus, invisible to your alert rules, and absent from your dashboards. playwright-exporter bridges that gap: it runs Playwright test suites on independent schedules and exposes pass/fail and duration as Prometheus metrics for continuous synthetic monitoring.
 
 ## Architecture
 

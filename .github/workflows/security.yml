@@ -21,7 +21,7 @@ jobs:
       - name: Run gosec
         # -exclude=G204: subprocess execution is core functionality (see CLAUDE.md)
         # -exclude=G304: config file path comes from operator-controlled CLI flag
-        uses: securego/gosec@baf0dcfbeced04bcdc3b3a4395d47a4c6f67c343 # master
+        uses: securego/gosec@24ee992e9515e0cbf4f818c256311a93bf7418e2 # master
         with:
           args: '-no-fail -fmt sarif -out gosec-results.sarif -exclude=G204,G304 ./...'
       - name: Upload SARIF

@@ -22,7 +22,7 @@ For architectural background and design decisions, see [CLAUDE.md](CLAUDE.md). F
 
 ### Prerequisites
 
-- Go 1.22 or later
+- Go 1.26.9 or later
 - `golangci-lint` ([install instructions](https://golangci-lint.run/welcome/install/))
 - `goimports` (`go install golang.org/x/tools/cmd/goimports@latest`)
 - Node.js v18+ and Playwright (only needed to run real tests against a live install — not required for unit tests)
@@ -68,7 +68,7 @@ Always run `make check` before pushing. CI enforces the same checks and will fai
 
 These conventions are enforced by CI and code review.
 
-**Go version:** 1.22+.
+**Go version:** 1.26.9+.
 
 **Logging:** Use `log/slog` with structured key-value pairs. Do not use `fmt.Print*` or `log.Print*`.
 

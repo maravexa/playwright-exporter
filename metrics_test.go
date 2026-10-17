@@ -56,14 +56,14 @@ func minimalConfig(t *testing.T) *Config {
 	t.Helper()
 	dir := t.TempDir()
 	return &Config{
-		ListenAddress: ":9115",
+		ListenAddress: fixtureListenAddress,
 		Schedules: []ScheduleConfig{
 			{
-				Name:          "sched",
+				Name:          fixtureSchedule,
 				Interval:      Duration{10 * time.Minute},
 				Timeout:       Duration{8 * time.Minute},
 				PlaywrightDir: dir,
-				Command:       "npx playwright test --reporter=json",
+				Command:       fixtureCommand,
 			},
 		},
 	}
@@ -73,7 +73,7 @@ func TestMetricsCache_InitialValues(t *testing.T) {
 	cfg := minimalConfig(t)
 	_, reg := newTestRegistry(t, cfg)
 
-	v := gatherGauge(t, reg, "playwright_schedule_interval_seconds", map[string]string{"schedule": "sched"})
+	v := gatherGauge(t, reg, "playwright_schedule_interval_seconds", map[string]string{fixtureScheduleLabel: fixtureSchedule})
 	if v != 600 {
 		t.Errorf("schedule_interval_seconds: got %v, want 600", v)
 	}
@@ -95,27 +95,27 @@ func TestMetricsCache_UpdateScheduleSuccess(t *testing.T) {
 
 	mc.UpdateScheduleSuccess(&cfg.Schedules[0], result)
 
-	up := gatherGauge(t, reg, "playwright_up", map[string]string{"schedule": "sched"})
+	up := gatherGauge(t, reg, "playwright_up", map[string]string{fixtureScheduleLabel: fixtureSchedule})
 	if up != 1 {
 		t.Errorf("playwright_up: got %v, want 1", up)
 	}
 
-	dur := gatherGauge(t, reg, "playwright_run_duration_seconds", map[string]string{"schedule": "sched"})
+	dur := gatherGauge(t, reg, "playwright_run_duration_seconds", map[string]string{fixtureScheduleLabel: fixtureSchedule})
 	if dur != 42 {
 		t.Errorf("run_duration_seconds: got %v, want 42", dur)
 	}
 
-	ts := gatherGauge(t, reg, "playwright_last_run_timestamp_seconds", map[string]string{"schedule": "sched"})
+	ts := gatherGauge(t, reg, "playwright_last_run_timestamp_seconds", map[string]string{fixtureScheduleLabel: fixtureSchedule})
 	if ts != float64(now.Unix()) {
 		t.Errorf("last_run_timestamp_seconds: got %v, want %v", ts, float64(now.Unix()))
 	}
 
-	okTest := gatherGauge(t, reg, "playwright_test_success", map[string]string{"schedule": "sched", "test": "Login > ok"})
+	okTest := gatherGauge(t, reg, "playwright_test_success", map[string]string{fixtureScheduleLabel: fixtureSchedule, fixtureTestLabel: "Login > ok"})
 	if okTest != 1 {
 		t.Errorf("test_success[ok]: got %v, want 1", okTest)
 	}
 
-	failTest := gatherGauge(t, reg, "playwright_test_success", map[string]string{"schedule": "sched", "test": "Login > fail"})
+	failTest := gatherGauge(t, reg, "playwright_test_success", map[string]string{fixtureScheduleLabel: fixtureSchedule, fixtureTestLabel: "Login > fail"})
 	if failTest != 0 {
 		t.Errorf("test_success[fail]: got %v, want 0", failTest)
 	}
@@ -132,9 +132,9 @@ func TestMetricsCache_UpdateScheduleFailure(t *testing.T) {
 		Tests:      []FlatTest{{Name: "t", Passed: true}},
 	})
 
-	mc.UpdateScheduleFailure("sched")
+	mc.UpdateScheduleFailure(fixtureSchedule)
 
-	up := gatherGauge(t, reg, "playwright_up", map[string]string{"schedule": "sched"})
+	up := gatherGauge(t, reg, "playwright_up", map[string]string{fixtureScheduleLabel: fixtureSchedule})
 	if up != 0 {
 		t.Errorf("playwright_up after failure: got %v, want 0", up)
 	}
@@ -143,14 +143,14 @@ func TestMetricsCache_UpdateScheduleFailure(t *testing.T) {
 func TestMetricsCache_CustomLabels(t *testing.T) {
 	dir := t.TempDir()
 	cfg := &Config{
-		ListenAddress: ":9115",
+		ListenAddress: fixtureListenAddress,
 		Schedules: []ScheduleConfig{
 			{
-				Name:          "sched",
+				Name:          fixtureSchedule,
 				Interval:      Duration{10 * time.Minute},
 				Timeout:       Duration{8 * time.Minute},
 				PlaywrightDir: dir,
-				Command:       "npx playwright test --reporter=json",
+				Command:       fixtureCommand,
 				Labels:        map[string]string{"site": "example", "tier": "prod"},
 			},
 		},
@@ -164,10 +164,10 @@ func TestMetricsCache_CustomLabels(t *testing.T) {
 	})
 
 	v := gatherGauge(t, reg, "playwright_test_success", map[string]string{
-		"schedule": "sched",
-		"test":     "my test",
-		"site":     "example",
-		"tier":     "prod",
+		fixtureScheduleLabel: fixtureSchedule,
+		fixtureTestLabel:     "my test",
+		"site":               "example",
+		"tier":               "prod",
 	})
 	if v != 1 {
 		t.Errorf("test_success with custom labels: got %v, want 1", v)
@@ -194,7 +194,7 @@ func TestMetricsCache_ConcurrentAccess(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			mc.UpdateScheduleFailure("sched")
+			mc.UpdateScheduleFailure(fixtureSchedule)
 		}()
 	}
 	wg.Wait()
@@ -204,8 +204,8 @@ func TestMetricsCache_IncrementSkipCounter(t *testing.T) {
 	cfg := minimalConfig(t)
 	mc, reg := newTestRegistry(t, cfg)
 
-	mc.IncrementSkipCounter("sched")
-	mc.IncrementSkipCounter("sched")
+	mc.IncrementSkipCounter(fixtureSchedule)
+	mc.IncrementSkipCounter(fixtureSchedule)
 
 	mfs, err := reg.Gather()
 	if err != nil {
@@ -217,7 +217,7 @@ func TestMetricsCache_IncrementSkipCounter(t *testing.T) {
 		}
 		for _, m := range mf.GetMetric() {
 			for _, lp := range m.GetLabel() {
-				if lp.GetName() == "schedule" && lp.GetValue() == "sched" {
+				if lp.GetName() == fixtureScheduleLabel && lp.GetValue() == fixtureSchedule {
 					if v := m.GetCounter().GetValue(); v != 2 {
 						t.Errorf("run_skip_total: got %v, want 2", v)
 					}

@@ -47,7 +47,7 @@ Run a single test file: `go test -race -run TestConfigValidation ./...`
 
 ## Conventions
 
-- Go 1.22+. Use `log/slog` for structured logging.
+- Go 1.26.9+. Use `log/slog` for structured logging.
 - Dependencies: `prometheus/client_golang`, `gopkg.in/yaml.v3`. No unnecessary third-party libraries.
 - All exported functions and types must have doc comments.
 - No global mutable state outside the Prometheus registry.

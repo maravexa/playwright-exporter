@@ -21,7 +21,7 @@ func newTestScheduler(t *testing.T, jsonOutput []byte) *Scheduler {
 		ListenAddress: ":0",
 		Schedules: []ScheduleConfig{
 			{
-				Name:          "sched",
+				Name:          fixtureSchedule,
 				Interval:      Duration{100 * time.Millisecond},
 				Timeout:       Duration{80 * time.Millisecond},
 				PlaywrightDir: dir,

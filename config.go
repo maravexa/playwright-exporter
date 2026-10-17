@@ -10,14 +10,16 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const scheduleLabel = "schedule"
+
 // validLabelName matches valid Prometheus label names.
 var validLabelName = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 
 // reservedLabels are label names that the exporter uses internally.
 var reservedLabels = map[string]bool{
-	"schedule": true,
-	"test":     true,
-	"step":     true,
+	scheduleLabel: true,
+	"test":        true,
+	"step":        true,
 }
 
 // Config is the top-level configuration for the exporter.

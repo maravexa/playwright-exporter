@@ -47,27 +47,27 @@ func (s *Scheduler) Run(ctx context.Context) {
 // runOnce performs a single test execution, respecting the atomic running flag.
 func (s *Scheduler) runOnce(ctx context.Context) {
 	if !s.running.CompareAndSwap(false, true) {
-		slog.Warn("skipping run, previous still in progress", "schedule", s.cfg.Name)
+		slog.Warn("skipping run, previous still in progress", scheduleLabel, s.cfg.Name)
 		s.metrics.IncrementSkipCounter(s.cfg.Name)
 		return
 	}
 	defer s.running.Store(false)
 
-	slog.Info("starting test run", "schedule", s.cfg.Name)
+	slog.Info("starting test run", scheduleLabel, s.cfg.Name)
 
 	runCtx, cancel := context.WithTimeout(ctx, s.cfg.Timeout.Duration)
 	defer cancel()
 
 	result, err := s.exec.Run(runCtx, s.cfg)
 	if err != nil {
-		slog.Error("test run failed", "schedule", s.cfg.Name, "error", err)
+		slog.Error("test run failed", scheduleLabel, s.cfg.Name, "error", err)
 		s.metrics.UpdateScheduleFailure(s.cfg.Name)
 		return
 	}
 
 	passed, failed := countResults(result.Tests)
 	slog.Info("test run completed",
-		"schedule", s.cfg.Name,
+		scheduleLabel, s.cfg.Name,
 		"duration", result.Duration,
 		"tests_passed", passed,
 		"tests_failed", failed,

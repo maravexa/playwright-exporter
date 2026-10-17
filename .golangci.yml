@@ -1,27 +1,38 @@
+version: "2"
 run:
   timeout: 5m
-
 linters:
   enable:
-    - errcheck
-    - govet
-    - staticcheck
-    - unused
-    - gosimple
-    - ineffassign
-    - typecheck
-    - gosec
     - goconst
+    - gosec
+    - misspell
+    - prealloc
+    - unparam
+  settings:
+    gosec:
+      excludes:
+        - G204 # Subprocess execution is core functionality
+        - G304 # Config path comes from operator-controlled CLI flag
+    govet:
+      enable-all: true
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
     - gofmt
     - goimports
-    - misspell
-    - unparam
-    - prealloc
-
-linters-settings:
-  govet:
-    enable-all: true
-  gosec:
-    excludes:
-      - G204  # Subprocess exec is core functionality
-      - G304  # Config file path comes from operator-controlled CLI flag
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

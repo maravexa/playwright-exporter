@@ -7,6 +7,14 @@ import (
 	"time"
 )
 
+const (
+	fixtureListenAddress = ":9115"
+	fixtureCommand       = "npx playwright test --reporter=json"
+	fixtureSchedule      = "sched"
+	fixtureScheduleLabel = "schedule"
+	fixtureTestLabel     = "test"
+)
+
 func TestLoadConfig_Valid(t *testing.T) {
 	dir := t.TempDir()
 	sub := filepath.Join(dir, "tests")
@@ -34,8 +42,8 @@ schedules:
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if cfg.ListenAddress != ":9115" {
-		t.Errorf("listen_address: got %q, want %q", cfg.ListenAddress, ":9115")
+	if cfg.ListenAddress != fixtureListenAddress {
+		t.Errorf("listen_address: got %q, want %q", cfg.ListenAddress, fixtureListenAddress)
 	}
 	if len(cfg.Schedules) != 1 {
 		t.Fatalf("expected 1 schedule, got %d", len(cfg.Schedules))
@@ -94,7 +102,7 @@ schedules:
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if cfg.Schedules[0].Command != "npx playwright test --reporter=json" {
+	if cfg.Schedules[0].Command != fixtureCommand {
 		t.Errorf("default command: got %q", cfg.Schedules[0].Command)
 	}
 }
@@ -109,7 +117,7 @@ func TestValidateConfig_MissingListenAddress(t *testing.T) {
 }
 
 func TestValidateConfig_NoSchedules(t *testing.T) {
-	cfg := &Config{ListenAddress: ":9115"}
+	cfg := &Config{ListenAddress: fixtureListenAddress}
 	if err := validateConfig(cfg); err == nil {
 		t.Error("expected error for no schedules")
 	}
@@ -118,7 +126,7 @@ func TestValidateConfig_NoSchedules(t *testing.T) {
 func TestValidateConfig_DuplicateName(t *testing.T) {
 	dir := t.TempDir()
 	cfg := &Config{
-		ListenAddress: ":9115",
+		ListenAddress: fixtureListenAddress,
 		Schedules: []ScheduleConfig{
 			{Name: "dupe", Interval: Duration{time.Minute}, PlaywrightDir: dir},
 			{Name: "dupe", Interval: Duration{time.Minute}, PlaywrightDir: dir},
@@ -132,7 +140,7 @@ func TestValidateConfig_DuplicateName(t *testing.T) {
 func TestValidateConfig_InvalidName(t *testing.T) {
 	dir := t.TempDir()
 	cfg := &Config{
-		ListenAddress: ":9115",
+		ListenAddress: fixtureListenAddress,
 		Schedules: []ScheduleConfig{
 			{Name: "bad-name!", Interval: Duration{time.Minute}, PlaywrightDir: dir},
 		},
@@ -145,10 +153,10 @@ func TestValidateConfig_InvalidName(t *testing.T) {
 func TestValidateConfig_TimeoutGEInterval(t *testing.T) {
 	dir := t.TempDir()
 	cfg := &Config{
-		ListenAddress: ":9115",
+		ListenAddress: fixtureListenAddress,
 		Schedules: []ScheduleConfig{
 			{
-				Name:          "sched",
+				Name:          fixtureSchedule,
 				Interval:      Duration{5 * time.Minute},
 				Timeout:       Duration{5 * time.Minute},
 				PlaywrightDir: dir,
@@ -162,10 +170,10 @@ func TestValidateConfig_TimeoutGEInterval(t *testing.T) {
 
 func TestValidateConfig_NonexistentDir(t *testing.T) {
 	cfg := &Config{
-		ListenAddress: ":9115",
+		ListenAddress: fixtureListenAddress,
 		Schedules: []ScheduleConfig{
 			{
-				Name:          "sched",
+				Name:          fixtureSchedule,
 				Interval:      Duration{time.Minute},
 				PlaywrightDir: "/nonexistent/path/that/does/not/exist",
 			},
@@ -185,10 +193,10 @@ func TestValidateConfig_NotADirectory(t *testing.T) {
 	f.Close()
 
 	cfg := &Config{
-		ListenAddress: ":9115",
+		ListenAddress: fixtureListenAddress,
 		Schedules: []ScheduleConfig{
 			{
-				Name:          "sched",
+				Name:          fixtureSchedule,
 				Interval:      Duration{time.Minute},
 				PlaywrightDir: f.Name(),
 			},
@@ -202,10 +210,10 @@ func TestValidateConfig_NotADirectory(t *testing.T) {
 func TestValidateConfig_InvalidLabelKey(t *testing.T) {
 	dir := t.TempDir()
 	cfg := &Config{
-		ListenAddress: ":9115",
+		ListenAddress: fixtureListenAddress,
 		Schedules: []ScheduleConfig{
 			{
-				Name:          "sched",
+				Name:          fixtureSchedule,
 				Interval:      Duration{time.Minute},
 				PlaywrightDir: dir,
 				Labels:        map[string]string{"bad-key!": "value"},
@@ -218,14 +226,14 @@ func TestValidateConfig_InvalidLabelKey(t *testing.T) {
 }
 
 func TestValidateConfig_ReservedLabelKey(t *testing.T) {
-	for _, reserved := range []string{"schedule", "test", "step"} {
+	for _, reserved := range []string{fixtureScheduleLabel, fixtureTestLabel, "step"} {
 		t.Run(reserved, func(t *testing.T) {
 			dir := t.TempDir()
 			cfg := &Config{
-				ListenAddress: ":9115",
+				ListenAddress: fixtureListenAddress,
 				Schedules: []ScheduleConfig{
 					{
-						Name:          "sched",
+						Name:          fixtureSchedule,
 						Interval:      Duration{time.Minute},
 						PlaywrightDir: dir,
 						Labels:        map[string]string{reserved: "value"},

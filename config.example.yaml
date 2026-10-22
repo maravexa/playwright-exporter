@@ -5,7 +5,7 @@ schedules:
     interval: 10m
     timeout: 8m
     playwright_dir: /opt/playwright-tests/site1
-    command: "npx playwright test --reporter=json"
+    command: "./node_modules/.bin/playwright test --reporter=json"
     labels:
       site: site1
       tier: production
@@ -14,7 +14,7 @@ schedules:
     interval: 5m
     timeout: 4m
     playwright_dir: /opt/playwright-tests/site2
-    command: "npx playwright test --reporter=json"
+    command: "./node_modules/.bin/playwright test --reporter=json"
     labels:
       site: site2
       tier: production
@@ -23,7 +23,7 @@ schedules:
     interval: 12h
     timeout: 10m
     playwright_dir: /opt/playwright-tests/internal_12h
-    command: "npx playwright test --reporter=json"
+    command: "./node_modules/.bin/playwright test --reporter=json"
     labels:
       category: internal
       tier: infrastructure

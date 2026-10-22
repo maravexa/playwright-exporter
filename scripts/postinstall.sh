@@ -6,13 +6,18 @@ if ! id -u playwright-exporter &>/dev/null; then
     useradd --system --no-create-home --shell /usr/sbin/nologin playwright-exporter
 fi
 
-# Step 2: Create and set directory ownership
-mkdir -p /opt/playwright-tests
-mkdir -p /opt/playwright-browsers
-mkdir -p /tmp/playwright-exporter/npm-cache
-chown -R playwright-exporter:playwright-exporter /opt/playwright-tests
-chown -R playwright-exporter:playwright-exporter /opt/playwright-browsers
-chown -R playwright-exporter:playwright-exporter /tmp/playwright-exporter
+# Step 2: Create only missing directories. Never recursively change operator data.
+for dir in /opt/playwright-tests /opt/playwright-browsers /tmp/playwright-exporter; do
+    if [[ -e "$dir" || -L "$dir" ]]; then
+        if [[ ! -d "$dir" || -L "$dir" ]]; then
+            echo "ERROR: inspect existing non-directory or symlink at $dir; nothing was replaced." >&2
+            exit 1
+        fi
+        # Existing ownership, permissions and all contents remain operator-managed.
+        continue
+    fi
+    install -d -m 0755 -o playwright-exporter -g playwright-exporter "$dir"
+done
 
 # Step 3: Reload systemd
 systemctl daemon-reload

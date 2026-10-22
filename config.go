@@ -123,7 +123,7 @@ func validateConfig(cfg *Config) error {
 		}
 
 		if s.Command == "" {
-			s.Command = "npx playwright test --reporter=json"
+			s.Command = "./node_modules/.bin/playwright test --reporter=json"
 		}
 
 		for k := range s.Labels {

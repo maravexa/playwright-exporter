@@ -58,38 +58,33 @@ nfpms:
           owner: root
           group: root
 
-      - dst: /opt/playwright-tests
-        type: dir
-        file_info:
-          mode: 0755
-          owner: playwright-exporter
-          group: playwright-exporter
-
-      - dst: /opt/playwright-browsers
-        type: dir
-        file_info:
-          mode: 0755
-          owner: playwright-exporter
-          group: playwright-exporter
-
-      - dst: /tmp/playwright-exporter
-        type: dir
-        file_info:
-          mode: 0755
-          owner: playwright-exporter
-          group: playwright-exporter
-
-      - dst: /tmp/playwright-exporter/npm-cache
-        type: dir
-        file_info:
-          mode: 0755
-          owner: playwright-exporter
-          group: playwright-exporter
-
+      # Runtime/project directories are created only if missing by postinstall.
+      # Do not declare ownership here: package upgrades must preserve existing projects.
       - src: scripts/playwright-exporter-setup.sh
         dst: /usr/local/bin/playwright-exporter-setup
         file_info:
           mode: 0755
+
+      - src: runtime/package.json
+        dst: /usr/share/playwright-exporter/runtime/package.json
+        file_info:
+          mode: 0644
+          owner: root
+          group: root
+
+      - src: runtime/package-lock.json
+        dst: /usr/share/playwright-exporter/runtime/package-lock.json
+        file_info:
+          mode: 0644
+          owner: root
+          group: root
+
+      - src: scripts/runtime-policy.sh
+        dst: /usr/share/playwright-exporter/runtime/runtime-policy.sh
+        file_info:
+          mode: 0644
+          owner: root
+          group: root
 
     scripts:
       postinstall: scripts/postinstall.sh
@@ -97,14 +92,8 @@ nfpms:
 
     overrides:
       deb:
-        dependencies:
-          - nodejs (>= 18.0.0)
-          - npm
         recommends:
           - chromium
       rpm:
-        dependencies:
-          - nodejs >= 18.0.0
-          - npm
         recommends:
           - chromium

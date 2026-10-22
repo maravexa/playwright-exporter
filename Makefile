@@ -3,7 +3,7 @@ VERSION     := $(shell git describe --tags --always --dirty 2>/dev/null || echo 
 LDFLAGS     := -X main.version=$(VERSION)
 GOFILES     := $(shell find . -name '*.go' -not -path './vendor/*')
 
-.PHONY: lint test fuzz clean fmt vet check install-deps snapshot package
+.PHONY: lint test test-runtime fuzz clean fmt vet check install-deps snapshot package
 
 # Build the binary for the current platform.
 $(BINARY_NAME): $(GOFILES)
@@ -20,6 +20,10 @@ lint:
 # Run tests with the race detector.
 test:
 	go test -race ./...
+
+# Read-only runtime policy fixtures and static installer checks.
+test-runtime:
+	python3 -m unittest discover -s tests -p 'test_runtime_setup.py' -v
 
 # Run fuzz tests for 30 seconds each
 fuzz:
@@ -42,7 +46,7 @@ vet:
 # Run all checks before committing: fmt, vet, lint, test.
 check: fmt vet lint test
 
-# Install runtime dependencies (Node.js, npm, Playwright Chromium).
+# Provision the locked Playwright runtime (operator-provided Node/npm and OS libraries).
 install-deps:
 	sudo ./scripts/install-deps.sh
 

@@ -23,7 +23,7 @@ Run a single test file: `go test -race -run TestConfigValidation ./...`
 - **Single binary, single systemd service.** Replaces a previous three-service stack (playwright oneshot + nginx + json-exporter).
 - **Multiple independent schedule goroutines**, each with its own ticker, timeout, and "already running" atomic flag. Schedules never block each other.
 - **Shared metrics cache** protected by `sync.RWMutex`. Schedule goroutines write-lock, the HTTP `/metrics` handler read-locks.
-- **Subprocess execution** via `exec.CommandContext`. Playwright is invoked as `npx playwright test --reporter=json` in the schedule's configured directory. Stdout is captured and parsed as JSON. Stderr is captured for error logging.
+- **Subprocess execution** via `exec.CommandContext`. Playwright is invoked through the project-local `node_modules/.bin/playwright` in the schedule's configured directory. Legacy plain `npx playwright ...` is normalized to that binary; npx itself is never executed. Missing dependencies fail with operator provisioning instructions. Stdout is captured and parsed as JSON. Stderr is captured for error logging.
 - **Playwright exits non-zero when tests fail but still produces valid JSON.** A test failure is NOT an exporter failure. Only parse/exec errors set `playwright_up=0`.
 
 ## Key Design Decisions
@@ -47,7 +47,7 @@ Run a single test file: `go test -race -run TestConfigValidation ./...`
 
 ## Conventions
 
-- Go 1.26.9+. Use `log/slog` for structured logging.
+- Go 1.26.10+. Use `log/slog` for structured logging.
 - Dependencies: `prometheus/client_golang`, `gopkg.in/yaml.v3`. No unnecessary third-party libraries.
 - All exported functions and types must have doc comments.
 - No global mutable state outside the Prometheus registry.

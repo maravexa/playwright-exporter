@@ -7,7 +7,7 @@ After=network.target
 Type=simple
 User=playwright-exporter
 Group=playwright-exporter
-ExecStart=/usr/local/bin/playwright-exporter -config /etc/playwright-exporter/config.yaml
+ExecStart=/usr/bin/playwright-exporter -config /etc/playwright-exporter/config.yaml
 Environment=PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
 Restart=on-failure
 RestartSec=5s

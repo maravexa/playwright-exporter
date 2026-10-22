@@ -16,9 +16,9 @@ graph TD
     B -->|spawns| D[Schedule goroutine: site1 10m]
     B -->|spawns| E[Schedule goroutine: site2 5m]
     B -->|spawns| F[Schedule goroutine: internal-tools 12h]
-    D -->|exec npx playwright test| G[Playwright process]
-    E -->|exec npx playwright test| H[Playwright process]
-    F -->|exec npx playwright test| I[Playwright process]
+    D -->|exec project-local playwright test| G[Playwright process]
+    E -->|exec project-local playwright test| H[Playwright process]
+    F -->|exec project-local playwright test| I[Playwright process]
     G -->|JSON stdout| J[Shared Metrics Cache\nsync.RWMutex]
     H -->|JSON stdout| J
     I -->|JSON stdout| J
@@ -45,9 +45,9 @@ sudo playwright-exporter-setup
 ### Arch Linux
 
 ```bash
-# Install nodejs and npm from official repos first
+# Provision supported Node/npm, OS libraries, service account and directories first
 sudo tar --zstd -xf playwright-exporter_X.Y.Z_linux_amd64.tar.zst -C /usr/local/bin/
-sudo playwright-exporter-setup
+sudo ./scripts/install-deps.sh  # from the reviewed source checkout
 ```
 
 ### Docker
@@ -62,11 +62,13 @@ docker run -d \
 
 ## Prerequisites
 
-The exporter requires Node.js (v18+) and Playwright with Chromium. Package installs handle this automatically. For manual or Arch Linux installs, an install script handles dependencies across Ubuntu, RHEL-family, and Arch Linux:
+Host setup requires an operator-provided, maintained Node.js **22.x or 24.x**, npm supporting lockfile v3, and Chromium OS libraries. It does not install Node, configure package repositories, or install OS packages. Package installation creates the service account and directories; source/manual installations must provision these separately.
 
-    sudo ./scripts/install-deps.sh
+`sudo playwright-exporter-setup` installs the exact runtime from the shipped integrity lockfile into a root-owned, versioned directory, then downloads its matching Chromium as the service user. It never initializes or modifies your test projects. The source-tree compatibility entry point is `sudo ./scripts/install-deps.sh`.
 
-See the script output for post-install steps.
+Each project must already contain its own reviewed manifest, integrity lockfile and installed local Playwright dependencies. To use the newly provisioned browser, align project Playwright with **1.64.1**. Existing projects using other versions are left unchanged; keep their matching browser/runtime or migrate them explicitly. The default command uses `./node_modules/.bin/playwright test --reporter=json`. Legacy plain `npx playwright ...` commands resolve directly to the same local binary; missing dependencies fail with provisioning instructions rather than downloading packages. Migrate npx options or global Playwright paths to the explicit local command.
+
+See [host runtime setup](docs/runtime-setup.md) for prerequisites, integrity limits and migration. The container shares the same locked Playwright version. Its official Playwright 1.64.1 Ubuntu 24.04 base is pinned by digest, supplies Node 24 and matching browsers, and installs the reviewed npm lockfile without lifecycle scripts. Mounted test projects still need their own matching local dependencies; the container does not initialize or rewrite them.
 
 ## Quick Start
 

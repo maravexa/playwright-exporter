@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -80,12 +82,11 @@ func NewExecutor() *Executor {
 // returns a RunResult. If the command exits non-zero but produces valid JSON
 // stdout, the JSON is still parsed — Playwright exits non-zero on test failures.
 func (e *Executor) Run(ctx context.Context, s *ScheduleConfig) (*RunResult, error) {
-	parts := strings.Fields(s.Command)
-	if len(parts) == 0 {
-		return nil, fmt.Errorf("empty command")
+	name, args, err := resolveScheduleCommand(s)
+	if err != nil {
+		return nil, err
 	}
-
-	cmd := e.buildCmd(ctx, parts[0], parts[1:]...)
+	cmd := e.buildCmd(ctx, name, args...)
 	cmd.Dir = s.PlaywrightDir
 
 	var stdout, stderr bytes.Buffer
@@ -175,4 +176,40 @@ func lastResult(results []TestResult) TestResult {
 		return TestResult{}
 	}
 	return results[len(results)-1]
+}
+
+const playwrightBinary = "playwright"
+
+// resolveScheduleCommand keeps legacy plain npx Playwright commands local.
+// Custom operator commands remain supported; this is not a shell sandbox.
+func resolveScheduleCommand(s *ScheduleConfig) (string, []string, error) {
+	parts := strings.Fields(s.Command)
+	if len(parts) == 0 {
+		return "", nil, fmt.Errorf("empty command")
+	}
+	if filepath.Base(parts[0]) == "npx" {
+		if len(parts) < 2 || parts[1] != playwrightBinary {
+			return "", nil, fmt.Errorf("schedule %q: npx options and package resolution are disabled; use ./node_modules/.bin/playwright with your existing test arguments", s.Name)
+		}
+		parts = parts[1:]
+	}
+	if filepath.Base(parts[0]) != playwrightBinary {
+		return parts[0], parts[1:], nil
+	}
+	project, err := filepath.Abs(s.PlaywrightDir)
+	if err != nil {
+		return "", nil, fmt.Errorf("schedule %q: resolve project directory: %w", s.Name, err)
+	}
+	local := filepath.Join(project, "node_modules", ".bin", playwrightBinary)
+	if parts[0] != playwrightBinary && filepath.Clean(parts[0]) != filepath.Join("node_modules", ".bin", playwrightBinary) && parts[0] != local {
+		return "", nil, fmt.Errorf("schedule %q: Playwright must use the project-local executable %q; global or alternate Playwright paths are disabled", s.Name, local)
+	}
+	info, err := os.Stat(local)
+	if err != nil {
+		return "", nil, fmt.Errorf("schedule %q: project-local Playwright is unavailable at %q; provision this project's reviewed locked dependencies before retrying (no package download attempted): %w", s.Name, local, err)
+	}
+	if !info.Mode().IsRegular() || info.Mode().Perm()&0o111 == 0 {
+		return "", nil, fmt.Errorf("schedule %q: project-local Playwright at %q is not an executable file; repair the project's locked dependency installation (no package download attempted)", s.Name, local)
+	}
+	return local, parts[1:], nil
 }

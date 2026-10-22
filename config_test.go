@@ -9,7 +9,7 @@ import (
 
 const (
 	fixtureListenAddress = ":9115"
-	fixtureCommand       = "npx playwright test --reporter=json"
+	fixtureCommand       = "./node_modules/.bin/playwright test --reporter=json"
 	fixtureSchedule      = "sched"
 	fixtureScheduleLabel = "schedule"
 	fixtureTestLabel     = "test"

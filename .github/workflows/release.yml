@@ -20,13 +20,48 @@ jobs:
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version-file: 'go.mod'
+      - name: Test asset staging
+        run: python3 -m unittest discover -s scripts -p test_release_assets.py -v
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@e24998b8b67b290c2fa8b7c14fcfa7de2c5c9b8c # v7.1.0
         with:
-          version: latest
-          args: release --clean
+          version: v2.18.3
+          args: release --clean --skip=publish --parallelism 2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Generate artifact SBOM
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
+        with:
+          path: dist/
+          syft-version: v1.55.0
+          format: spdx-json
+          output-file: dist/playwright-exporter.sbom.spdx.json
+          upload-release-assets: false
+          upload-artifact: false
+      - name: Stage complete asset set and checksums
+        run: python3 scripts/prepare-release-assets.py dist release-assets
+      - name: Install cosign
+        uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
+        with:
+          cosign-release: v3.1.3
+      - name: Sign and verify checksum manifest
+        env:
+          SIGNING_IDENTITY: https://github.com/${{ github.repository }}/.github/workflows/release.yml@${{ github.ref }}
+        run: |
+          cosign sign-blob --yes --bundle release-assets/checksums.txt.sigstore.json release-assets/checksums.txt
+          cosign verify-blob \
+            --bundle release-assets/checksums.txt.sigstore.json \
+            --certificate-identity "$SIGNING_IDENTITY" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            release-assets/checksums.txt
+          (cd release-assets && sha256sum --check checksums.txt)
+      - name: Publish verified assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" release-assets/* \
+            --verify-tag --title "$GITHUB_REF_NAME" --generate-notes
 
   trivy_packages:
     needs: [release]
@@ -56,77 +91,6 @@ jobs:
         if: always()
         with:
           sarif_file: trivy-release-results.sarif
-
-  sbom:
-    needs: [release]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
-        with:
-          go-version-file: 'go.mod'
-      - name: Generate SBOM
-        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
-        with:
-          format: spdx-json
-          output-file: playwright-exporter.sbom.spdx.json
-      - name: Upload SBOM to release
-        run: gh release upload "${GITHUB_REF#refs/tags/}" playwright-exporter.sbom.spdx.json --clobber
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  checksum:
-    needs: [release]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Download release artifacts
-        run: |
-          mkdir -p dist
-          gh release download "${GITHUB_REF#refs/tags/}" --dir dist --repo ${{ github.repository }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Generate checksums
-        run: |
-          cd dist
-          sha256sum ./* > checksums.txt
-          cat checksums.txt
-      - name: Upload checksums to release
-        run: gh release upload "${GITHUB_REF#refs/tags/}" dist/checksums.txt --clobber --repo ${{ github.repository }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  sign:
-    needs: [release]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      id-token: write
-    steps:
-      - name: Install cosign
-        uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
-      - name: Download release artifacts
-        run: |
-          mkdir -p dist
-          gh release download "${GITHUB_REF#refs/tags/}" --dir dist --repo ${{ github.repository }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Sign artifacts
-        run: |
-          for file in dist/*; do
-            [ -f "$file" ] || continue
-            cosign sign-blob --yes "$file" \
-              --output-signature "${file}.sig" \
-              --output-certificate "${file}.pem"
-          done
-      - name: Upload signatures to release
-        run: |
-          gh release upload "${GITHUB_REF#refs/tags/}" dist/*.sig dist/*.pem --clobber --repo ${{ github.repository }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   docker:
     needs: [release]

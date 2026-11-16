@@ -3,7 +3,7 @@ VERSION     := $(shell git describe --tags --always --dirty 2>/dev/null || echo 
 LDFLAGS     := -X main.version=$(VERSION)
 GOFILES     := $(shell find . -name '*.go' -not -path './vendor/*')
 
-.PHONY: lint test test-runtime fuzz clean fmt vet check install-deps snapshot package
+.PHONY: lint test test-runtime test-contracts fuzz clean fmt vet check install-deps snapshot package
 
 # Build the binary for the current platform.
 $(BINARY_NAME): $(GOFILES)
@@ -24,6 +24,11 @@ test:
 # Read-only runtime policy fixtures and static installer checks.
 test-runtime:
 	python3 -m unittest discover -s tests -p 'test_runtime_setup.py' -v
+
+# Static runtime, service and release-asset contracts. No installation or service start.
+test-contracts:
+	python3 -m unittest discover -s tests -p 'test_*.py' -v
+	python3 -m unittest discover -s scripts -p 'test_release_assets.py' -v
 
 # Run fuzz tests for 30 seconds each
 fuzz:

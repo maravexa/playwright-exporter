@@ -1,4 +1,10 @@
 listen_address: ":9115"
+# Opt in only with exactly one schedule and a separately verified whole-service
+# cleanup/restart boundary. This is not an untrusted-code sandbox.
+restart_on_run_failure: false
+# Linux-only per-run PID/user namespaces; requires reviewed host policy.
+# Failure to create namespaces fails the run. No unisolated fallback.
+isolate_process_tree: false
 
 schedules:
   - name: site1

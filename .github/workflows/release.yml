@@ -8,7 +8,15 @@ on:
 permissions: {}
 
 jobs:
+  container_preflight:
+    if: github.event.repository.visibility == 'public'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/container-health.yml
+
   release:
+    if: github.event.repository.visibility == 'public'
+    needs: [container_preflight]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -64,6 +72,7 @@ jobs:
             --verify-tag --title "$GITHUB_REF_NAME" --generate-notes
 
   trivy_packages:
+    if: github.event.repository.visibility == 'public'
     needs: [release]
     runs-on: ubuntu-latest
     permissions:
@@ -93,6 +102,7 @@ jobs:
           sarif_file: trivy-release-results.sarif
 
   docker:
+    if: github.event.repository.visibility == 'public'
     needs: [release]
     runs-on: ubuntu-latest
     permissions:
@@ -104,7 +114,7 @@ jobs:
         with:
           go-version-file: 'go.mod'
       - name: Build binary for container
-        run: GOOS=linux GOARCH=amd64 go build -ldflags "-X main.version=${GITHUB_REF#refs/tags/}" -o playwright-exporter .
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-X main.version=${GITHUB_REF#refs/tags/}" -o playwright-exporter .
       - name: Login to GHCR
         uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
         with:
@@ -116,11 +126,37 @@ jobs:
       - name: Extract version
         id: version
         run: echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
-      - name: Build and push
+      - name: Build publication candidate without pushing
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
         with:
           context: .
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository }}:${{ steps.version.outputs.tag }}
-            ghcr.io/${{ github.repository }}:latest
+          pull: true
+          no-cache: true
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: playwright-exporter:release-candidate
+      - name: Check publication Node security version
+        run: |
+          node_version=$(docker run --rm --network none --read-only --entrypoint node playwright-exporter:release-candidate --version)
+          python3 scripts/check-node-security-release.py "$node_version"
+      - name: Gate the exact publication image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # master
+        with:
+          scan-type: image
+          image-ref: playwright-exporter:release-candidate
+          scanners: vuln
+          vuln-type: os,library
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: 'false'
+          exit-code: '1'
+      - name: Push scanned image without rebuilding
+        env:
+          IMAGE_REPOSITORY: ghcr.io/${{ github.repository }}
+          VERSION: ${{ steps.version.outputs.tag }}
+        run: |
+          docker tag playwright-exporter:release-candidate "$IMAGE_REPOSITORY:$VERSION"
+          docker tag playwright-exporter:release-candidate "$IMAGE_REPOSITORY:latest"
+          docker push "$IMAGE_REPOSITORY:$VERSION"
+          docker push "$IMAGE_REPOSITORY:latest"

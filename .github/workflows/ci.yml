@@ -10,7 +10,18 @@ on:
 permissions: {}
 
 jobs:
+  contracts:
+    if: github.event.repository.visibility == 'public'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Test runtime, service and release-asset contracts
+        run: make test-contracts
+
   lint:
+    if: github.event.repository.visibility == 'public'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -32,6 +43,7 @@ jobs:
         run: golangci-lint run
 
   test:
+    if: github.event.repository.visibility == 'public'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -57,7 +69,8 @@ jobs:
           path: coverage.out
 
   build:
-    needs: [lint, test]
+    if: github.event.repository.visibility == 'public'
+    needs: [contracts, lint, test]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -77,6 +90,7 @@ jobs:
         run: go build -ldflags "-X main.version=ci-${{ github.sha }}" -o /dev/null .
 
   govulncheck:
+    if: github.event.repository.visibility == 'public'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -93,6 +107,7 @@ jobs:
         run: govulncheck ./...
 
   shellcheck:
+    if: github.event.repository.visibility == 'public'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -105,6 +120,7 @@ jobs:
           severity: warning
 
   actionlint:
+    if: github.event.repository.visibility == 'public'
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -1,0 +1,35 @@
+name: Go dependency health
+
+on:
+  schedule:
+    - cron: '17 6 * * *'  # Daily advisory checks, separate from release work.
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - go.mod
+      - go.sum
+      - .github/dependabot.yml
+      - .github/workflows/go-dependency-health.yml
+
+permissions:
+  contents: read
+
+jobs:
+  go-advisories:
+    if: github.event.repository.visibility == 'public'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Download modules
+        run: go mod download
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.9.0
+      - name: Check reachable Go vulnerabilities
+        run: govulncheck ./...

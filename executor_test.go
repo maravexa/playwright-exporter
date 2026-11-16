@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 )
 
@@ -128,6 +129,78 @@ func TestFlattenReport_Failure(t *testing.T) {
 	}
 }
 
+func TestFlattenReport_NestedSuites(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join("testdata", "nested.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	report, err := parseReport(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := []FlatTest{
+		{Name: "checkout.spec.ts > opens storefront", Passed: true, DurationSeconds: 0.125},
+		{Name: "checkout.spec.ts > Checkout > submits order", Passed: true, DurationSeconds: 0.45},
+		{Name: "checkout.spec.ts > Checkout > Card > declines payment", DurationSeconds: 0.3},
+		{Name: "checkout.spec.ts > Checkout > Card > awaits confirmation", DurationSeconds: 1},
+		{Name: "checkout.spec.ts > Checkout > Card > missing result"},
+		{Name: "checkout.spec.ts > Account > submits order"},
+		{Name: "Login > enters credentials", Passed: true, DurationSeconds: 0.2},
+	}
+	if got := flattenReport(report); !slices.Equal(got, want) {
+		t.Errorf("flattenReport() = %+v, want %+v", got, want)
+	}
+}
+
+func TestFlattenReport_EmptyTitles(t *testing.T) {
+	tests := []struct {
+		name, parent, child, spec, want string
+	}{
+		{name: "empty parent", child: "Child", spec: "Spec", want: "Child > Spec"},
+		{name: "empty child", parent: "Parent", spec: "Spec", want: "Parent > Spec"},
+		{name: "empty spec", parent: "Parent", child: "Child", want: "Parent > Child"},
+		{name: "all empty"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			report := &PlaywrightReport{Suites: []Suite{{
+				Title: tc.parent,
+				Suites: []Suite{{
+					Title: tc.child,
+					Specs: []Spec{{
+						Title: tc.spec,
+						Tests: []Test{{}},
+					}},
+				}},
+			}}}
+			want := []FlatTest{{Name: tc.want}}
+			if got := flattenReport(report); !slices.Equal(got, want) {
+				t.Errorf("flattenReport() = %+v, want %+v", got, want)
+			}
+		})
+	}
+}
+
+func TestFlattenReport_EmptySuites(t *testing.T) {
+	for _, data := range []string{
+		`{}`,
+		`{"suites":null}`,
+		`{"suites":[]}`,
+		`{"suites":[{"title":"empty","suites":[{}, {"specs":[{"tests":[]}]}]}]}`,
+	} {
+		t.Run(data, func(t *testing.T) {
+			report, err := parseReport([]byte(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := flattenReport(report); len(got) != 0 {
+				t.Errorf("flattenReport() = %+v, want no tests", got)
+			}
+		})
+	}
+}
+
 func TestBuildTestName(t *testing.T) {
 	tests := []struct {
 		suite, spec, want string
@@ -173,6 +246,12 @@ func FuzzParsePlaywrightReport(f *testing.F) {
 	if err == nil {
 		f.Add(failJSON)
 	}
+	nestedJSON, err := os.ReadFile("testdata/nested.json")
+	if err != nil {
+		f.Fatal(err)
+	}
+	f.Add(nestedJSON)
+	f.Add([]byte(`{"suites":[{"title":"outer","suites":[{"specs":[{"tests":[{}]}]}]}]}`))
 	// Seed with minimal valid JSON
 	f.Add([]byte(`{"suites":[]}`))
 	// Seed with empty
@@ -182,6 +261,9 @@ func FuzzParsePlaywrightReport(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, data []byte) {
 		// Must not panic. Errors are expected and fine.
-		_, _ = ParsePlaywrightReport(data)
+		report, err := ParsePlaywrightReport(data)
+		if err == nil {
+			_ = flattenReport(report)
+		}
 	})
 }

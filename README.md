@@ -62,13 +62,13 @@ docker run -d \
 
 ## Prerequisites
 
-Host setup requires an operator-provided, maintained Node.js **22.x or 24.x**, npm supporting lockfile v3, and Chromium OS libraries. It does not install Node, configure package repositories, or install OS packages. Package installation creates the service account and directories; source/manual installations must provision these separately.
+Host setup requires an operator-provided, maintained Node.js **22.x, 24.x or 26.x**, npm supporting lockfile v3, and Chromium OS libraries. It does not install Node, configure package repositories, or install OS packages. Package installation creates the service account and directories; source/manual installations must provision these separately.
 
 `sudo playwright-exporter-setup` installs the exact runtime from the shipped integrity lockfile into a root-owned, versioned directory, then downloads its matching Chromium as the service user. It never initializes or modifies your test projects. The source-tree compatibility entry point is `sudo ./scripts/install-deps.sh`.
 
 Each project must already contain its own reviewed manifest, integrity lockfile and installed local Playwright dependencies. To use the newly provisioned browser, align project Playwright with **1.64.1**. Existing projects using other versions are left unchanged; keep their matching browser/runtime or migrate them explicitly. The default command uses `./node_modules/.bin/playwright test --reporter=json`. Legacy plain `npx playwright ...` commands resolve directly to the same local binary; missing dependencies fail with provisioning instructions rather than downloading packages. Migrate npx options or global Playwright paths to the explicit local command.
 
-See [host runtime setup](docs/runtime-setup.md) for prerequisites, integrity limits and migration. The container shares the same locked Playwright version. Its official Playwright 1.64.1 Ubuntu 24.04 base is pinned by digest, supplies Node 24 and matching browsers, and installs the reviewed npm lockfile without lifecycle scripts. Mounted test projects still need their own matching local dependencies; the container does not initialize or rewrite them.
+See [host runtime setup](docs/runtime-setup.md) for prerequisites, integrity limits and migration. The container shares the same locked Playwright version. Its official Playwright 1.64.1 Ubuntu 26.04 base is pinned by digest, supplies Node 26 and matching browsers, and installs the reviewed npm lockfile without lifecycle scripts. The image build refreshes public APT/Node point updates and pins npm CLI 12.2.2; it uses the base image's existing package sources. A non-root Tini process forwards stop signals to the exporter and reaps orphaned dead children. Before migrating projects, review their Node engine ranges and rebuild any native dependencies for Node 26. Mounted projects still need their own matching local dependencies; the container does not initialize or rewrite them.
 
 ## Quick Start
 
@@ -143,6 +143,8 @@ schedules:
 | `playwright_test_success` | Gauge | `schedule`, `test`, + custom | 1 if the test passed on its last run, 0 otherwise. |
 | `playwright_test_duration_seconds` | Gauge | `schedule`, `test`, + custom | Duration of the test in seconds on its last run. |
 
+The `test` label joins nonempty suite titles and the spec title with ` > `. Flat reports retain names such as `Login > enters credentials`; nested reports include every parent, such as `checkout.spec.ts > Checkout > submits order`.
+
 ### Exporter meta
 
 | Metric | Type | Description |
@@ -194,7 +196,7 @@ groups:
 
 ```sh
 # Copy binary
-sudo install -m 755 playwright-exporter /usr/local/bin/
+sudo install -m 755 playwright-exporter /usr/bin/
 
 # Create user
 sudo useradd --system --no-create-home playwright-exporter
@@ -204,9 +206,7 @@ sudo mkdir -p /etc/playwright-exporter
 sudo cp config.yaml /etc/playwright-exporter/config.yaml
 sudo chown -R playwright-exporter: /etc/playwright-exporter
 
-# Create temp directory (used by Playwright)
-sudo mkdir -p /tmp/playwright-exporter
-sudo chown playwright-exporter: /tmp/playwright-exporter
+# The service uses its own writable private /tmp. No host temp directory is needed.
 
 # Install and start the service
 sudo cp playwright-exporter.service /etc/systemd/system/
@@ -229,6 +229,14 @@ sudo journalctl -u playwright-exporter -f
 - **Shared test utilities**: Each schedule directory is independent. If you need shared test utilities across directories, put them in a common library and import them in your individual Playwright configs.
 
 - **Adding a new suite**: The exporter only runs schedules defined in the config file. Adding a new test directory requires adding a corresponding `schedules` block to the YAML and restarting the service.
+
+- **Cooperative cancellation**: On timeout or shutdown, the default runner sends SIGINT to the direct CLI so Playwright can stop its workers and close browsers. If that process does not exit within five seconds, Go kills the direct process. The capture layer separately limits post-exit pipe draining. Cancellation remains an exporter failure even when JSON was emitted first. This is cooperative teardown, not hard containment of arbitrary detached descendants; total completion can extend beyond the configured run timeout during cleanup.
+
+- **Service boundary**: The packaged systemd unit runs as an unprivileged account with private temporary storage. Stop/restart targets its whole cgroup and force-kills remaining members after the ten-second service stop deadline. Schedules share that account and cgroup; individual run timeouts do not provide a separate security boundary or guarantee termination of arbitrary detached descendants. Run only trusted operator-managed tests and custom commands. See [service lifecycle and isolation](docs/service-lifecycle.md) for deployment checks and limits.
+
+- **Bounded command output**: Each run captures at most 64 MiB of JSON stdout and 64 KiB of stderr. Excess output is drained; oversized JSON is rejected as an exporter error, and captured stderr is marked when truncated. A timed-out run cannot succeed merely because it emitted valid JSON first. After the direct command exits, stdout and stderr have up to one second to finish draining. Pipes still held open by descendants are closed on the exporter side and the run fails, even if the captured prefix is valid JSON or the command exited non-zero. Capture goroutines finish before the run returns. These limits do not bound browser memory, aggregate concurrency or descendant-process lifetimes, and do not terminate descendants.
+
+- **Dependency health**: For public repositories, Go modules and the committed runtime lockfile are checked daily, with update PRs from Dependabot; GitHub Actions updates remain weekly. All hosted jobs are disabled for private repositories. The runtime advisory job and submits public dependency names/versions to the official npm registry without installing or fixing packages. These checks do not cover browser binaries, Node/npm itself, OS packages or separately managed test projects. Runtime updates still require matching browser/image validation before release.
 
 - **Non-zero exit is not a failure**: Playwright exits non-zero when tests fail, but the exporter still parses the JSON output and records per-test results. `playwright_up` is set to 0 only when the exporter itself cannot execute or parse results (e.g. process crash, timeout, malformed output).
 

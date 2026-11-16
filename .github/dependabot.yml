@@ -3,7 +3,13 @@ updates:
   - package-ecosystem: gomod
     directory: /
     schedule:
-      interval: weekly
+      interval: daily
+    commit-message:
+      prefix: "deps:"
+  - package-ecosystem: npm
+    directory: /runtime
+    schedule:
+      interval: daily
     commit-message:
       prefix: "deps:"
   - package-ecosystem: github-actions
@@ -12,3 +18,9 @@ updates:
       interval: weekly
     commit-message:
       prefix: "ci:"
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: "deps:"

@@ -12,6 +12,7 @@ permissions: {}
 
 jobs:
   gosec:
+    if: github.event.repository.visibility == 'public'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -19,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Run gosec
-        # -exclude=G204: subprocess execution is core functionality (see CLAUDE.md)
+        # -exclude=G204: subprocess execution is core functionality (see AGENTS.md)
         # -exclude=G304: config file path comes from operator-controlled CLI flag
         uses: securego/gosec@b4f29347566880540afec8205b633d2859377cec # master
         with:
@@ -32,6 +33,7 @@ jobs:
           sarif_file: gosec-results.sarif
 
   trivy_fs:
+    if: github.event.repository.visibility == 'public'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -54,6 +56,7 @@ jobs:
           sarif_file: trivy-fs-results.sarif
 
   codeql:
+    if: github.event.repository.visibility == 'public'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -72,7 +75,7 @@ jobs:
 
   dependency_review:
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    if: github.event.repository.visibility == 'public' && github.event_name == 'pull_request'
     permissions:
       contents: read
     steps:
@@ -87,6 +90,7 @@ jobs:
   scorecard:
     runs-on: ubuntu-latest
     if: >-
+      github.event.repository.visibility == 'public' &&
       github.ref == format('refs/heads/{0}', github.event.repository.default_branch) &&
       (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
     permissions:

@@ -2,7 +2,9 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"regexp"
 	"time"
@@ -24,8 +26,12 @@ var reservedLabels = map[string]bool{
 
 // Config is the top-level configuration for the exporter.
 type Config struct {
-	ListenAddress string           `yaml:"listen_address"`
-	Schedules     []ScheduleConfig `yaml:"schedules"`
+	ListenAddress string `yaml:"listen_address"`
+	// IsolateProcessTree requests Linux per-run PID/user namespaces, without fallback.
+	IsolateProcessTree bool `yaml:"isolate_process_tree"`
+	// RestartOnRunFailure stops this single-schedule process on runner failure.
+	RestartOnRunFailure bool             `yaml:"restart_on_run_failure"`
+	Schedules           []ScheduleConfig `yaml:"schedules"`
 }
 
 // ScheduleConfig defines one scheduled Playwright test run.
@@ -58,8 +64,14 @@ func (d *Duration) UnmarshalYAML(value *yaml.Node) error {
 // It is the primary entry point for testing and fuzzing.
 func ParseConfigBytes(data []byte) (*Config, error) {
 	var cfg Config
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
+	decoder := yaml.NewDecoder(bytes.NewReader(data))
+	decoder.KnownFields(true)
+	if err := decoder.Decode(&cfg); err != nil {
 		return nil, fmt.Errorf("parsing config: %w", err)
+	}
+	var extra any
+	if err := decoder.Decode(&extra); err != io.EOF {
+		return nil, fmt.Errorf("config must contain exactly one YAML document")
 	}
 	if err := validateConfig(&cfg); err != nil {
 		return nil, err
@@ -86,6 +98,15 @@ func validateConfig(cfg *Config) error {
 		return fmt.Errorf("at least one schedule must be defined")
 	}
 
+	if cfg.IsolateProcessTree {
+		if _, err := processTreeIsolation(); err != nil {
+			return err
+		}
+	}
+	if cfg.RestartOnRunFailure && len(cfg.Schedules) != 1 {
+		return fmt.Errorf("restart_on_run_failure requires exactly one schedule")
+	}
+
 	names := make(map[string]bool, len(cfg.Schedules))
 	for i := range cfg.Schedules {
 		s := &cfg.Schedules[i]
@@ -109,6 +130,10 @@ func validateConfig(cfg *Config) error {
 			s.Timeout.Duration = time.Duration(float64(s.Interval.Duration) * 0.8)
 		} else if s.Timeout.Duration >= s.Interval.Duration {
 			return fmt.Errorf("schedule %q: timeout (%s) must be less than interval (%s)", s.Name, s.Timeout.Duration, s.Interval.Duration)
+		}
+
+		if s.Timeout.Duration <= 0 {
+			return fmt.Errorf("schedule %q: timeout must be > 0 after applying defaults", s.Name)
 		}
 
 		if s.PlaywrightDir == "" {

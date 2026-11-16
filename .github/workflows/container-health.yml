@@ -1,0 +1,46 @@
+name: Container health
+
+on:
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '47 6 * * *'
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  container-advisories:
+    if: github.event.repository.visibility == 'public'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Check release and service contracts
+        run: make test-contracts
+      - name: Build binary for container
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o playwright-exporter .
+      - name: Build full image without publishing
+        run: docker build --pull --no-cache --platform linux/amd64 --tag playwright-exporter:preflight .
+      - name: Check published native Node security releases
+        run: |
+          node_version=$(docker run --rm --network none --read-only --entrypoint node playwright-exporter:preflight --version)
+          python3 scripts/check-node-security-release.py "$node_version"
+      - name: Gate full image on HIGH and CRITICAL advisories
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # master
+        with:
+          scan-type: image
+          image-ref: playwright-exporter:preflight
+          scanners: vuln
+          vuln-type: os,library
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: 'false'
+          exit-code: '1'

@@ -13,12 +13,17 @@ Restart=on-failure
 RestartSec=5s
 MemoryMax=2G
 TimeoutStopSec=10
+# Stop the entire service cgroup, including detached test/browser descendants.
+# This applies to service stop/restart, not an individual schedule timeout.
+KillMode=control-group
+SendSIGKILL=yes
 
 # Security hardening
 NoNewPrivileges=yes
 ProtectSystem=strict
 ProtectHome=yes
-ReadWritePaths=/tmp/playwright-exporter /opt/playwright-browsers /opt/playwright-tests
+# PrivateTmp provides writable /tmp inside the service namespace.
+ReadWritePaths=/opt/playwright-browsers /opt/playwright-tests
 PrivateTmp=yes
 
 [Install]

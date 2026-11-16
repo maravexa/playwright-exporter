@@ -281,3 +281,53 @@ schedules:
 		_, _ = ParseConfigBytes(data)
 	})
 }
+
+func TestValidateConfig_TimeoutMustRemainPositive(t *testing.T) {
+	for _, tc := range []struct {
+		name              string
+		interval, timeout time.Duration
+	}{
+		{"negative explicit timeout", time.Minute, -time.Second},
+		{"default rounds to zero", time.Nanosecond, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := &Config{ListenAddress: fixtureListenAddress, Schedules: []ScheduleConfig{{
+				Name: fixtureSchedule, Interval: Duration{tc.interval}, Timeout: Duration{tc.timeout}, PlaywrightDir: t.TempDir(),
+			}}}
+			if err := validateConfig(cfg); err == nil {
+				t.Fatal("accepted non-positive effective timeout")
+			}
+		})
+	}
+}
+
+func TestRestartOnRunFailureRequiresSingleSchedule(t *testing.T) {
+	dir := t.TempDir()
+	cfg := &Config{ListenAddress: fixtureListenAddress, RestartOnRunFailure: true, Schedules: []ScheduleConfig{
+		{Name: "one", Interval: Duration{time.Minute}, PlaywrightDir: dir},
+		{Name: "two", Interval: Duration{time.Minute}, PlaywrightDir: dir},
+	}}
+	if err := validateConfig(cfg); err == nil {
+		t.Fatal("multiple schedules accepted in restart mode")
+	}
+	cfg.Schedules = cfg.Schedules[:1]
+	if err := validateConfig(cfg); err != nil {
+		t.Fatalf("single schedule rejected: %v", err)
+	}
+}
+
+func TestParseConfigRejectsUnknownFields(t *testing.T) {
+	base := "listen_address: ':0'\nschedules:\n  - name: one\n    interval: 1m\n    playwright_dir: '" + t.TempDir() + "'\n"
+	for _, data := range []string{base + "restart_on_run_failur: true\n", base + "    timeuot: 1s\n"} {
+		if _, err := ParseConfigBytes([]byte(data)); err == nil {
+			t.Fatal("unknown field accepted")
+		}
+	}
+}
+
+func TestParseConfigRejectsAdditionalDocuments(t *testing.T) {
+	data := "listen_address: ':0'\nschedules:\n  - name: one\n    interval: 1m\n    playwright_dir: '" + t.TempDir() + "'\n---\nrestart_on_run_failure: true\n"
+	if _, err := ParseConfigBytes([]byte(data)); err == nil {
+		t.Fatal("second YAML document silently ignored")
+	}
+}

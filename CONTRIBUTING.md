@@ -2,7 +2,7 @@
 
 Thank you for your interest in contributing. This document covers the development workflow, conventions, and CI requirements for this project.
 
-For architectural background and design decisions, see [CLAUDE.md](CLAUDE.md). For security vulnerability reporting, see [docs/SECURITY.md](docs/SECURITY.md).
+For architectural background and design decisions, see [AGENTS.md](AGENTS.md). For security vulnerability reporting, see [docs/SECURITY.md](docs/SECURITY.md).
 
 ---
 
@@ -22,10 +22,10 @@ For architectural background and design decisions, see [CLAUDE.md](CLAUDE.md). F
 
 ### Prerequisites
 
-- Go 1.26.9 or later
+- Go 1.26.11 or later
 - `golangci-lint` ([install instructions](https://golangci-lint.run/welcome/install/))
 - `goimports` (`go install golang.org/x/tools/cmd/goimports@latest`)
-- Node.js v18+ and Playwright (only needed to run real tests against a live install — not required for unit tests)
+- A maintained Node.js 22.x, 24.x or 26.x release and Playwright (only needed to run real tests against a live install — not required for unit tests)
 
 ### Fork and clone
 
@@ -68,7 +68,7 @@ Always run `make check` before pushing. CI enforces the same checks and will fai
 
 These conventions are enforced by CI and code review.
 
-**Go version:** 1.26.9+.
+**Go version:** 1.26.11+.
 
 **Logging:** Use `log/slog` with structured key-value pairs. Do not use `fmt.Print*` or `log.Print*`.
 
@@ -84,7 +84,7 @@ These conventions are enforced by CI and code review.
 
 **Security linting:** `gosec` runs in CI. `G204` (subprocess exec) and `G304` (file path from config) are intentionally excluded — subprocess execution and config-driven paths are core functionality. Do not add new blanket exclusions without discussion.
 
-**Error handling:** Return errors; do not swallow them. A test failure returned by Playwright is not an exporter error — only exec/parse failures set `playwright_up=0`. See [CLAUDE.md](CLAUDE.md) for the full rationale.
+**Error handling:** Return errors; do not swallow them. A test failure returned by Playwright is not an exporter error — only exec/parse failures set `playwright_up=0`. See [AGENTS.md](AGENTS.md) for the full rationale.
 
 ---
 
@@ -154,7 +154,7 @@ Maintainers may ask for changes. Address review feedback in new commits; do not 
 
 ## CI Overview
 
-Three workflow files run automatically:
+Core workflow files:
 
 **`ci.yml`** — Runs on every push and pull request.
 - `lint`: golangci-lint
@@ -172,5 +172,7 @@ Three workflow files run automatically:
 - `scorecard`: OpenSSF Scorecard (weekly only)
 
 All SARIF results upload to the GitHub Security tab.
+
+**Dependency health** — For public repositories, `go-dependency-health.yml` and `runtime-dependency-health.yml` run daily, on demand, and on relevant dependency PRs. The runtime job audits only public-repository lockfile metadata against the official npm registry; it does not install/fix packages or qualify browser/OS components. Dependabot checks Go and runtime npm updates daily, while action updates remain weekly. Updates still need review and the applicable runtime/image validation.
 
 **`release.yml`** — Runs on version tags (`v*`). Builds deb/rpm packages, Docker images, SPDX SBOM, SHA256 checksums, and Sigstore keyless signatures. You do not need to interact with this workflow during normal development.

@@ -30,14 +30,14 @@ class RuntimePolicyTests(unittest.TestCase):
                 env={'PATH': tmp}, text=True, capture_output=True, check=False)
 
     def test_supported_node_lines(self):
-        for version in ['v22.0.0', 'v22.20.1', 'v24.0.0', 'v24.9.3']:
+        for version in ['v22.0.0', 'v22.20.1', 'v24.0.0', 'v24.9.3', 'v26.0.0', 'v26.13.0']:
             with self.subTest(version=version):
                 result = self.check_policy(version)
                 self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_missing_old_odd_future_and_malformed_node(self):
-        for version in [None, '', 'v18.20.0', 'v20.19.0', 'v23.1.0', 'v26.0.0',
-                        'v24.1.0-rc.1', 'v24.1', 'v24.1.0 extra', 'v24.x.0']:
+        for version in [None, '', 'v18.20.0', 'v20.19.0', 'v23.1.0', 'v25.1.0', 'v27.0.0', 'v28.0.0',
+                        'v24.1.0-rc.1', 'v26.1.0-rc.1', 'v24.1', 'v24.1.0 extra', 'v24.x.0']:
             with self.subTest(version=version):
                 result = self.check_policy(version)
                 self.assertNotEqual(result.returncode, 0)
@@ -128,13 +128,34 @@ class RuntimeStaticTests(unittest.TestCase):
         manifest = json.loads((ROOT / 'runtime/package.json').read_text())
         version = manifest['dependencies']['@playwright/test']
         self.assertRegex(dockerfile, r'FROM mcr\.microsoft\.com/playwright:v' + re.escape(version)
-                         + r'-noble@sha256:[0-9a-f]{64}')
+                         + r'-resolute@sha256:[0-9a-f]{64}')
         self.assertIn('COPY runtime/package.json runtime/package-lock.json', dockerfile)
         self.assertIn('npm ci --engine-strict --ignore-scripts --no-audit --no-fund', dockerfile)
         self.assertNotIn('RUN npx', dockerfile)
         self.assertNotIn('install chromium', dockerfile)
         self.assertIn('ln -s /ms-playwright /opt/playwright-browsers', dockerfile)
         self.assertIn('USER playwright-exporter', dockerfile)
+
+    def test_container_patch_steps_keep_scripts_disabled(self):
+        dockerfile = (ROOT / 'Dockerfile').read_text()
+        self.assertRegex(dockerfile, r'(?m)^ARG NPM_VERSION=\d+\.\d+\.\d+$')
+        self.assertIn('apt-get install --yes --no-install-recommends --only-upgrade apt libapt-pkg7.0 nodejs', dockerfile)
+        install = dockerfile.split('npm install --global', 1)[1].split('&&', 1)[0]
+        for option in ['--engine-strict', '--ignore-scripts', '--no-audit', '--no-fund', '"npm@${NPM_VERSION}"']:
+            self.assertIn(option, install)
+
+    def test_container_uses_nonroot_init_with_direct_child_signals(self):
+        dockerfile = (ROOT / 'Dockerfile').read_text()
+        self.assertIn('apt-get install --yes --no-install-recommends tini', dockerfile)
+        self.assertIn('ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/playwright-exporter"]', dockerfile)
+        self.assertIn('USER playwright-exporter', dockerfile)
+        self.assertNotIn('TINI_KILL_PROCESS_GROUP', dockerfile)
+
+    def test_container_removes_unused_upstream_service_helper(self):
+        dockerfile = (ROOT / 'Dockerfile').read_text()
+        self.assertRegex(dockerfile, r'(?m)^RUN rm -- /usr/bin/pebble$')
+        self.assertLess(dockerfile.index('RUN rm -- /usr/bin/pebble'),
+                        dockerfile.index('USER playwright-exporter'))
 
     def test_shell_syntax_only(self):
         for path in (ROOT / 'scripts').glob('*.sh'):

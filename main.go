@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"sync"
 	"syscall"
 	"time"
 
@@ -78,15 +79,27 @@ func main() {
 	}
 	mc.SetBuildInfo(version)
 
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
+	defer signal.Stop(quit)
+
 	// Start one scheduler goroutine per schedule.
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	var schedulers sync.WaitGroup
+	schedulerErr := make(chan error, len(cfg.Schedules))
 	exec := NewExecutor()
+	exec.isolateProcessTree = cfg.IsolateProcessTree
 	for i := range cfg.Schedules {
 		s := &cfg.Schedules[i]
 		sched := NewScheduler(s, mc, exec)
-		go sched.Run(ctx)
+		sched.stopOnError = cfg.RestartOnRunFailure
+		schedulers.Go(func() {
+			if err := sched.Run(ctx); err != nil {
+				schedulerErr <- err
+			}
+		})
 	}
 
 	// HTTP server.
@@ -111,15 +124,17 @@ func main() {
 		}
 	}()
 
-	// Wait for shutdown signal or server error.
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
-
+	exitCode := 0
+	// Wait for shutdown signal, runner failure or server error.
 	select {
 	case sig := <-quit:
 		slog.Info("shutting down", "signal", sig)
+	case err := <-schedulerErr:
+		slog.Error("single-schedule service restart required", "error", err)
+		exitCode = 1
 	case err := <-serverErr:
 		slog.Error("HTTP server error", "error", err)
+		exitCode = 1
 	}
 
 	cancel() // stop all schedulers
@@ -131,5 +146,10 @@ func main() {
 		slog.Error("HTTP server shutdown error", "error", err)
 	}
 
+	schedulers.Wait()
+
 	slog.Info("shutdown complete")
+	if exitCode != 0 {
+		os.Exit(exitCode)
+	}
 }

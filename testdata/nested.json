@@ -1,0 +1,127 @@
+{
+  "suites": [
+    {
+      "title": "checkout.spec.ts",
+      "specs": [
+        {
+          "title": "opens storefront",
+          "tests": [
+            {
+              "results": [
+                {
+                  "status": "passed",
+                  "duration": 125
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "suites": [
+        {
+          "title": "Checkout",
+          "specs": [
+            {
+              "title": "submits order",
+              "tests": [
+                {
+                  "results": [
+                    {
+                      "status": "failed",
+                      "duration": 50
+                    },
+                    {
+                      "status": "passed",
+                      "duration": 450
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "suites": [
+            {
+              "title": "Card",
+              "specs": [
+                {
+                  "title": "declines payment",
+                  "tests": [
+                    {
+                      "results": [
+                        {
+                          "status": "failed",
+                          "duration": 300
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "title": "awaits confirmation",
+                  "tests": [
+                    {
+                      "results": [
+                        {
+                          "status": "timedOut",
+                          "duration": 1000
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "title": "missing result",
+                  "tests": [
+                    {
+                      "results": []
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Account",
+          "specs": [
+            {
+              "title": "submits order",
+              "tests": [
+                {
+                  "results": [
+                    {
+                      "status": "skipped",
+                      "duration": 0
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Empty",
+          "suites": []
+        }
+      ]
+    },
+    {
+      "title": "Login",
+      "specs": [
+        {
+          "title": "enters credentials",
+          "tests": [
+            {
+              "results": [
+                {
+                  "status": "passed",
+                  "duration": 200
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

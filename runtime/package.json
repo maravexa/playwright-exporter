@@ -4,7 +4,7 @@
   "private": true,
   "description": "Locked browser provisioning runtime; operator test projects are managed separately.",
   "engines": {
-    "node": ">=22 <23 || >=24 <25"
+    "node": ">=22 <23 || >=24 <25 || >=26 <27"
   },
   "dependencies": {
     "@playwright/test": "1.64.1"

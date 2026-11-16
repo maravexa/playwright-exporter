@@ -159,3 +159,53 @@ func TestCountResults(t *testing.T) {
 		t.Errorf("countResults: got passed=%d failed=%d, want 2,1", p, f)
 	}
 }
+
+func TestSingleScheduleRestartOnRunnerFailure(t *testing.T) {
+	s := newTestScheduler(t, []byte(`not-json`))
+	s.stopOnError = true
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if err := s.Run(ctx); err == nil {
+		t.Fatal("runner failure did not request process restart")
+	}
+	if ctx.Err() != nil {
+		t.Fatal("failure was not returned before the watchdog")
+	}
+}
+
+func TestSingleScheduleTestFailureDoesNotRestart(t *testing.T) {
+	s := newTestScheduler(t, []byte(`{"suites":[{"specs":[{"tests":[{"results":[{"status":"failed"}]}]}]}]}`))
+	s.stopOnError = true
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	if err := s.Run(ctx); err != nil {
+		t.Fatalf("valid failed test report requested restart: %v", err)
+	}
+}
+
+func TestSingleScheduleTimeoutRequestsRestart(t *testing.T) {
+	s := newTestScheduler(t, nil)
+	s.stopOnError = true
+	s.cfg.Timeout.Duration = 20 * time.Millisecond
+	s.exec.buildCmd = func(ctx context.Context, _ string, _ ...string) *exec.Cmd {
+		return exec.CommandContext(ctx, "sleep", "5")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if err := s.Run(ctx); err == nil {
+		t.Fatal("run timeout did not request restart")
+	}
+	if ctx.Err() != nil {
+		t.Fatal("parent watchdog fired")
+	}
+}
+
+func TestSingleScheduleShutdownDoesNotRestart(t *testing.T) {
+	s := newTestScheduler(t, nil)
+	s.stopOnError = true
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := s.Run(ctx); err != nil {
+		t.Fatalf("normal shutdown requested restart: %v", err)
+	}
+}

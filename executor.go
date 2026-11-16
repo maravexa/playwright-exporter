@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -19,10 +20,11 @@ type PlaywrightReport struct {
 	Stats  Stats   `json:"stats"`
 }
 
-// Suite is a named group of specs in a Playwright report.
+// Suite is a named group of specs and child suites in a Playwright report.
 type Suite struct {
-	Title string `json:"title"`
-	Specs []Spec `json:"specs"`
+	Title  string  `json:"title"`
+	Specs  []Spec  `json:"specs"`
+	Suites []Suite `json:"suites"`
 }
 
 // Spec is a single test specification containing one or more test runs.
@@ -67,6 +69,8 @@ type RunResult struct {
 
 // Executor runs a Playwright command and parses its JSON output.
 type Executor struct {
+	// isolateProcessTree requests kernel cleanup when each runner exits.
+	isolateProcessTree bool
 	// buildCmd is a hook for tests to supply a fake command builder.
 	buildCmd func(ctx context.Context, name string, args ...string) *exec.Cmd
 }
@@ -74,7 +78,7 @@ type Executor struct {
 // NewExecutor creates an Executor that runs real subprocesses.
 func NewExecutor() *Executor {
 	return &Executor{
-		buildCmd: exec.CommandContext,
+		buildCmd: newRunnerCommand,
 	}
 }
 
@@ -87,15 +91,38 @@ func (e *Executor) Run(ctx context.Context, s *ScheduleConfig) (*RunResult, erro
 		return nil, err
 	}
 	cmd := e.buildCmd(ctx, name, args...)
+	if e.isolateProcessTree {
+		attributes, isolationErr := processTreeIsolation()
+		if isolationErr != nil {
+			return nil, fmt.Errorf("configuring process-tree isolation: %w", isolationErr)
+		}
+		cmd.SysProcAttr = attributes
+	}
 	cmd.Dir = s.PlaywrightDir
 
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	output, err := newCommandOutput(os.Pipe)
+	if err != nil {
+		return nil, fmt.Errorf("capturing playwright output: %w", err)
+	}
 
 	start := time.Now()
-	runErr := cmd.Run()
+	runErr, captureErr := output.run(cmd, outputDrainTimeout)
 	elapsed := time.Since(start)
+
+	if err := ctx.Err(); err != nil {
+		return nil, errors.Join(fmt.Errorf("playwright run interrupted: %w", err), captureErr)
+	}
+	if captureErr != nil {
+		return nil, fmt.Errorf("capturing playwright output: %w", errors.Join(captureErr, runErr))
+	}
+	var exitErr *exec.ExitError
+	if runErr != nil && !errors.As(runErr, &exitErr) {
+		return nil, fmt.Errorf("command failed: %w", runErr)
+	}
+	stdout, stderr := &output.stdout.output, &output.stderr.output
+	if stdout.truncated {
+		return nil, fmt.Errorf("playwright JSON output exceeds %d-byte capture limit", maxReportBytes)
+	}
 
 	stdoutBytes := stdout.Bytes()
 
@@ -140,12 +167,16 @@ func parseReport(data []byte) (*PlaywrightReport, error) {
 }
 
 // flattenReport converts nested suites/specs/tests into a flat list of FlatTest,
-// building names as "Suite > Spec".
+// building names as "Suite > Child suite > Spec".
 func flattenReport(report *PlaywrightReport) []FlatTest {
-	var tests []FlatTest
-	for _, suite := range report.Suites {
+	return flattenSuites(report.Suites, "", nil)
+}
+
+func flattenSuites(suites []Suite, parent string, tests []FlatTest) []FlatTest {
+	for _, suite := range suites {
+		suiteName := buildTestName(parent, suite.Title)
 		for _, spec := range suite.Specs {
-			name := buildTestName(suite.Title, spec.Title)
+			name := buildTestName(suiteName, spec.Title)
 			for _, test := range spec.Tests {
 				result := lastResult(test.Results)
 				tests = append(tests, FlatTest{
@@ -155,6 +186,7 @@ func flattenReport(report *PlaywrightReport) []FlatTest {
 				})
 			}
 		}
+		tests = flattenSuites(suite.Suites, suiteName, tests)
 	}
 	return tests
 }

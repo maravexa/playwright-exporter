@@ -3,6 +3,8 @@ version: 2
 builds:
   - id: playwright-exporter
     binary: playwright-exporter
+    env:
+      - CGO_ENABLED=0
     goos:
       - linux
     goarch:

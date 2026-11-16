@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"sync/atomic"
 	"time"
@@ -9,10 +10,11 @@ import (
 
 // Scheduler manages the run loop for a single schedule.
 type Scheduler struct {
-	cfg     *ScheduleConfig
-	metrics *MetricsCache
-	exec    *Executor
-	running atomic.Bool
+	cfg         *ScheduleConfig
+	metrics     *MetricsCache
+	exec        *Executor
+	running     atomic.Bool
+	stopOnError bool
 }
 
 // NewScheduler creates a Scheduler for the given schedule configuration.
@@ -27,9 +29,11 @@ func NewScheduler(cfg *ScheduleConfig, metrics *MetricsCache, exec *Executor) *S
 // Run starts the scheduler loop. It executes the test suite immediately on
 // startup, then on each tick of the configured interval. Run blocks until ctx
 // is cancelled.
-func (s *Scheduler) Run(ctx context.Context) {
+func (s *Scheduler) Run(ctx context.Context) error {
 	// Run immediately at startup.
-	s.runOnce(ctx)
+	if err := s.runOnce(ctx); err != nil && s.stopOnError {
+		return err
+	}
 
 	ticker := time.NewTicker(s.cfg.Interval.Duration)
 	defer ticker.Stop()
@@ -37,19 +41,21 @@ func (s *Scheduler) Run(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			return
+			return nil
 		case <-ticker.C:
-			s.runOnce(ctx)
+			if err := s.runOnce(ctx); err != nil && s.stopOnError {
+				return err
+			}
 		}
 	}
 }
 
 // runOnce performs a single test execution, respecting the atomic running flag.
-func (s *Scheduler) runOnce(ctx context.Context) {
+func (s *Scheduler) runOnce(ctx context.Context) error {
 	if !s.running.CompareAndSwap(false, true) {
 		slog.Warn("skipping run, previous still in progress", scheduleLabel, s.cfg.Name)
 		s.metrics.IncrementSkipCounter(s.cfg.Name)
-		return
+		return nil
 	}
 	defer s.running.Store(false)
 
@@ -62,7 +68,10 @@ func (s *Scheduler) runOnce(ctx context.Context) {
 	if err != nil {
 		slog.Error("test run failed", scheduleLabel, s.cfg.Name, "error", err)
 		s.metrics.UpdateScheduleFailure(s.cfg.Name)
-		return
+		if ctx.Err() != nil {
+			return nil // Normal service shutdown must not become a restart failure.
+		}
+		return fmt.Errorf("schedule %q runner failed: %w", s.cfg.Name, err)
 	}
 
 	passed, failed := countResults(result.Tests)
@@ -74,6 +83,7 @@ func (s *Scheduler) runOnce(ctx context.Context) {
 	)
 
 	s.metrics.UpdateScheduleSuccess(s.cfg, result)
+	return nil
 }
 
 // countResults returns the number of passed and failed tests.
